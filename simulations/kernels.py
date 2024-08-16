@@ -20,8 +20,8 @@ class InertialParticle(JITParticle): # particle that is avected according to the
     # wp = Variable()
     
     ## for testing write gradients and veloctiy
-    # dudt = Variable('dudt',dtype=np.float32, to_write=True, initial=0)
-    # dudx = Variable('dudx',dtype=np.float32, to_write=True, initial=0)
+    #dudt = Variable('dudt',dtype=np.float32, to_write=True, initial=0)
+    #DuDt = Variable('DuDt',dtype=np.float32, to_write=True, initial=0)
     
 def InitializeParticles(particle,fieldset,time): 
     (u,v)=fieldset.UV[time, particle.depth, particle.lat, particle.lon]
@@ -46,6 +46,8 @@ def MRAdvectionEC2D(particle,fieldset,time):
     The fieldset should contain constants Omega_earth (angular 
     velocity earth), delta_x (stepping for gradients), delta_t 
     stepping for temporal derivatives)
+
+    TO DO: double check formula (and prefactors)
 
     """
     # read in velocity at location of particle
@@ -74,7 +76,7 @@ def MRAdvectionEC2D(particle,fieldset,time):
     DvDt=dvdt+uf*dvdx+vf*dvdy
 
     # coriolis force
-    f=2*fieldset.Omega_earth*math.sin(particle.lat*math.pi/180) #coriolis parameter
+    f=0#2*fieldset.Omega_earth*math.sin(particle.lat*math.pi/180) #coriolis parameter
     ucor=-vf*f
     vcor=uf*f
 
@@ -89,12 +91,15 @@ def MRAdvectionEC2D(particle,fieldset,time):
     particle.up=particle.up+a_lon*particle.dt
     particle.vp=particle.vp+a_lat*particle.dt
 
-    particle_dlon+=uf*particle.dt#particle.up*particle.dt
-    particle_dlat+=vf*particle.dt#particle.vp*particle.dt
+    particle_dlon+=particle.up*particle.dt#+uf*particle.dt
+    particle_dlat+=particle.vp*particle.dt#vf*particle.dt#
 
     # sample t-delta_t already for next timestep as we cannot call t-delta_t at timestep t direclty (because parcels only loads in 2 timesteps of the fieldset)
     (particle.uf_tm, particle.vf_tm) =fieldset.UV[time+particle.dt-fieldset.delta_t, particle.depth, particle.lat+particle_dlat, particle.lon+particle_dlon]
 
+    #testing sampling
+    #particle.DuDt=DuDt
+    #particle.dudt=dudt
 
 
 def deleteParticle(particle, fieldset, time):
