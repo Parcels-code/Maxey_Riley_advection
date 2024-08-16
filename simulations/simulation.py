@@ -19,7 +19,7 @@ to do:
 
 # import needed packages
 import numpy as np
-from parcels import FieldSet, ParticleSet, ParticleFile, Variable
+from parcels import FieldSet, ParticleSet, ParticleFile, Variable, AdvectionRK4, AdvectionEE
 from datetime import datetime, timedelta
 from kernels import InertialParticle, MRAdvectionEC2D, InitializeParticles, deleteParticle
 
@@ -32,10 +32,10 @@ input_directory=base_directory+'fieldsets/'
 output_directory=base_directory+'particle_simulations/'
 # set files 
 input_file = input_directory + 'kaufmann_vortex_field.nc'
-output_file = output_directory + 'Inertial_particles_MREC2D_Kaufmann_vortex.zarr'
+output_file = output_directory + 'Inertia_particle_Kaufmann_vortex.zarr'
 
 #set integration timestep 
-dt_timestep=1
+dt_timestep=0.02
 
 #########################
 #       Set Fields      #
@@ -64,28 +64,29 @@ if(Delta_t < dt_timestep):
     raise ValueError('dt_timestep particle larger then temporaral resolution fieldset! Decrease dt_timestep particle')
  
 delta_x=0.5*Delta_x
+delta_y=0.5*Delta_y
 delta_t=0.5*dt_timestep
 fieldset.add_constant('delta_x',delta_x)
-fieldset.add_constant('delta_y',delta_x)
+fieldset.add_constant('delta_y',delta_y)
 fieldset.add_constant('delta_t',delta_t)
 
 
 ###################################
 #       Initialize particles      #
 ###################################
-Nx=10
-Ny=10
+Nx=5
+Ny=1
 nparticles=Nx*Ny
-xmin=-10
+xmin=0
 xmax=10
-ymin=-10
-ymax=10
+ymin=0
+ymax=0
 x=np.linspace(xmin,xmax,Nx)
 y=np.linspace(ymin,ymax,Ny)
 lons, lats=np.meshgrid(x,y)
 times=np.zeros(nparticles)
 
-B=np.full(nparticles,0.9)
+B=np.full(nparticles,1.1)
 Bterm=(3./(1+2*B))
 tau=np.full(nparticles,1.*10**-3)
 tau_inv=1.0/tau
@@ -95,14 +96,15 @@ pset = ParticleSet.from_list(fieldset,InertialParticle,lon=lons,lat=lats,time=ti
 
 
 kernels=[MRAdvectionEC2D,deleteParticle]
+kernels_test=[AdvectionEE,deleteParticle]
 kernels_init=[InitializeParticles,deleteParticle]
 
 ######################
 #  Run Simulation    #
 ######################
 
-runtime=100#fieldset.U.grid.time[-2]
-dt_write=dt_timestep
+runtime=500#fieldset.U.grid.time[-2]
+dt_write=2#dt_timestep
 pfile = ParticleFile(output_file, pset, outputdt=dt_write, chunks=(nparticles,100))
 
 # add simulation settings as metadata
