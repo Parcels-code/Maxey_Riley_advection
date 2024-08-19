@@ -21,7 +21,7 @@ to do:
 import numpy as np
 from parcels import FieldSet, ParticleSet, ParticleFile, Variable, AdvectionRK4, AdvectionEE
 from datetime import datetime, timedelta
-from kernels import InertialParticle, MRAdvectionEC2D, InitializeParticles, deleteParticle
+from kernels import InertialParticle, MRAdvectionEC2D, MRAdvectionRK42D, InitializeParticles, deleteParticle
 
 from parcels.tools.converters import Geographic, GeographicPolar
 
@@ -32,10 +32,10 @@ input_directory=base_directory+'fieldsets/'
 output_directory=base_directory+'particle_simulations/'
 # set files 
 input_file = input_directory + 'kaufmann_vortex_field.nc'
-output_file = output_directory + 'Inertia_particle_Kaufmann_vortex.zarr'
+output_file = output_directory + 'Inertia_particle_Kaufmann_vortex_RK4_B080_tau1E0.zarr'
 
 #set integration timestep 
-dt_timestep=0.02
+dt_timestep=1.0
 
 #########################
 #       Set Fields      #
@@ -86,16 +86,16 @@ y=np.linspace(ymin,ymax,Ny)
 lons, lats=np.meshgrid(x,y)
 times=np.zeros(nparticles)
 
-B=np.full(nparticles,1.1)
-Bterm=(3./(1+2*B))
-tau=np.full(nparticles,1.*10**-3)
+B=np.full(nparticles,0.8)
+Bterm=(3./(1.+2.*B))
+tau=np.full(nparticles,1.)
 tau_inv=1.0/tau
 
 pset = ParticleSet.from_list(fieldset,InertialParticle,lon=lons,lat=lats,time=times,
                              Bterm=Bterm, tau_inv=tau_inv)#, vf_tm=fieldset.V, up=fieldset.U, vp=fieldset.V)
 
 
-kernels=[MRAdvectionEC2D,deleteParticle]
+kernels=[MRAdvectionRK42D,deleteParticle]
 kernels_test=[AdvectionEE,deleteParticle]
 kernels_init=[InitializeParticles,deleteParticle]
 
@@ -103,8 +103,8 @@ kernels_init=[InitializeParticles,deleteParticle]
 #  Run Simulation    #
 ######################
 
-runtime=500#fieldset.U.grid.time[-2]
-dt_write=2#dt_timestep
+runtime=1000#fieldset.U.grid.time[-2]
+dt_write=1#dt_timestep
 pfile = ParticleFile(output_file, pset, outputdt=dt_write, chunks=(nparticles,100))
 
 # add simulation settings as metadata
