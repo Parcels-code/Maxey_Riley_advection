@@ -31,18 +31,18 @@ base_directory='/storage/shared/oceanparcels/output_data/data_Meike/MR_advection
 input_directory=base_directory+'fieldsets/'
 output_directory=base_directory+'particle_simulations/'
 # set files 
-input_file = input_directory + 'kaufmann_vortex_field.nc'
-output_file = output_directory + 'Inertia_particle_Kaufmann_vortex_SM_RK4_B080_tau1E-1.zarr'
+input_file = input_directory + 'kaufmann_vortex_field_units.nc'
+output_file = output_directory + 'tracer_particle_Kaufmann_vortex_units.zarr'
 
 #set integration timestep 
-dt_timestep=1.0
+dt_timestep=timedelta(seconds=10)
 
 #########################
 #       Set Fields      #
 #########################
 # variables and dimensions (2D)
-variables= {   'U': 'U', #uo, vo
-                        'V': 'V'}
+variables= {    'U': 'U', #uo, vo
+                'V': 'V'}
 
 
 
@@ -51,7 +51,7 @@ dimensions = {  'lat': 'lat',
                 'lon': 'lon',
                 'time': 'time'}
 
-fieldset = FieldSet.from_netcdf(input_file,variables,dimensions, mesh='flat', allow_time_extrapolation = 'False')
+fieldset = FieldSet.from_netcdf(input_file,variables,dimensions, mesh='flat', allow_time_extrapolation = 'True')
 fieldset.add_constant('Omega_earth',7.2921 * (10**-5)) #angular velocity earth in radians/second
 Delta_x=fieldset.U.grid.lon[1]-fieldset.U.grid.lon[0]
 Delta_y=fieldset.U.grid.lat[1]-fieldset.U.grid.lat[0]
@@ -60,8 +60,8 @@ print("Delta_x = {:0.2f}".format(Delta_x))
 print("Delta_y = {:0.2f}".format(Delta_y))
 print("Delta_t = {:0.2f}".format(Delta_t))
 
-if(Delta_t < dt_timestep):
-    raise ValueError('dt_timestep particle larger then temporaral resolution fieldset! Decrease dt_timestep particle')
+# if(Delta_t < dt_timestep):
+#     raise ValueError('dt_timestep particle larger then temporaral resolution fieldset! Decrease dt_timestep particle')
  
 delta_x=0.5*Delta_x
 delta_y=0.5*Delta_y
@@ -78,22 +78,22 @@ Nx=5
 Ny=1
 nparticles=Nx*Ny
 xmin=0
-xmax=10
+xmax=40
 ymin=0
 ymax=0
 x=np.linspace(xmin,xmax,Nx)
 y=np.linspace(ymin,ymax,Ny)
 lons, lats=np.meshgrid(x,y)
 times=np.zeros(nparticles)
-B=np.full(nparticles,0.8)
-tau=np.full(nparticles,0.1)
+B=np.full(nparticles,1.2)
+tau=np.full(nparticles,1.0)
 
 
 pset = ParticleSet.from_list(fieldset,InertialParticle,lon=lons,lat=lats,time=times,
                              B=B, tau=tau)#, vf_tm=fieldset.V, up=fieldset.U, vp=fieldset.V)
 
 
-kernels=[MRSMAdvectionRK4_2D,deleteParticle]
+kernels=[AdvectionRK4,deleteParticle]
 kernels_test=[AdvectionEE,deleteParticle]
 kernels_init=[InitializeParticles,deleteParticle]
 
@@ -101,13 +101,15 @@ kernels_init=[InitializeParticles,deleteParticle]
 #  Run Simulation    #
 ######################
 
-runtime=1000#fieldset.U.grid.time[-2]
-dt_write=1#dt_timestep
+runtime=timedelta(hours=3)#1000#fieldset.U.grid.time[-2]
+dt_write=timedelta(seconds=10)#dt_timestep
 pfile = ParticleFile(output_file, pset, outputdt=dt_write, chunks=(nparticles,100))
 
 # add simulation settings as metadata
-pfile.add_metadata('dt',str(dt_timestep))
+pfile.add_metadata('dt',str(dt_timestep.total_seconds()))
+pfile.add_metadata('write_dt',str(dt_write.total_seconds()))
 pfile.add_metadata('delta_t',str(delta_t))
+pfile.add_metadata('runtime', str(runtime.total_seconds()))
 pfile.add_metadata('delta_x',str(delta_x))
 pfile.add_metadata("dimensions","2D")
 pfile.add_metadata("nparticles",nparticles)
@@ -121,7 +123,6 @@ pset.execute(kernels_init, runtime=1, dt=1,verbose_progress=True)
 
 
 # run simulation
-
 pset.execute(kernels, runtime=runtime, dt=dt_timestep, output_file=pfile)
 
 
