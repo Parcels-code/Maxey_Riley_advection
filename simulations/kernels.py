@@ -31,6 +31,53 @@ def deleteParticle(particle, fieldset, time):
     if particle.state >= 50:
         particle.delete()
 
+def set_displacement(particle, fieldset, time):
+    particle.d2s = fieldset.distance2shore[
+        time, particle.depth, particle.lat, particle.lon
+    ]
+    if particle.d2s < 0.5:
+        dispUab = fieldset.dispU[time, particle.depth, particle.lat, particle.lon]
+        dispVab = fieldset.dispV[time, particle.depth, particle.lat, particle.lon]
+        particle.dU = dispUab
+        particle.dV = dispVab
+    else:
+        particle.dU = 0.0
+        particle.dV = 0.0
+
+
+def displace(particle, fieldset, time):
+    if particle.d2s < 0.5:
+        particle_dlon += particle.dU * particle.dt
+        particle_dlat += particle.dV * particle.dt
+
+
+def remove_at_bounds(particle, fieldset, time):
+    """Kernel for deleting particles if they are out of bounds in the small test run."""
+    flag_ = False
+    if particle.lat < fieldset.lat_min:
+        particle.delete()
+        flag_ = True
+    if particle.lat > fieldset.lat_max:
+        particle.delete()        
+        flag_ = True
+    if particle.lon < fieldset.lon_min:
+        particle.delete()
+        flag_ = True
+    if particle.lon > fieldset.lon_max:
+        particle.delete()
+        flag_ = True
+    # if flag_:
+    #     print('particle deleted at bounds') 
+
+def too_close_to_edge(particle, fieldset, time):
+    if(math.fabs(particle.lon - fieldset.lon_min) < 2 * fieldset.delta_x):
+        particle.delete()
+    if(math.fabs(particle.lat - fieldset.lat_min) < 2 * fieldset.delta_y):
+        particle.delete()
+    if(math.fabs(fieldset.lon_max - particle.lon) < 2 * fieldset.delta_x):
+        particle.delete()
+    if(math.fabs(fieldset.lat_max - particle.lat) < 2 * fieldset.delta_y):
+        particle.delete()
 
 def InitializeParticles2D(particle, fieldset, time):
     """Kernel for initializing the velocity of the intertial particles in 2D
@@ -757,10 +804,11 @@ def MRSMAdvectionRK4_2D(particle, fieldset, time):
     at t+delta_t (4th step rk4) with a backward finite difference.
     """
     Bterm_tau = (2 * (1. - particle.B) / (1. + 2. * particle.B)) * particle.tau
+
     norm_deltax = 1.0 / (2.0 * fieldset.delta_x)
     norm_deltay = 1.0 / (2.0 * fieldset.delta_y)
     norm_deltat = 1.0 / (1.0 * particle.dt)
-
+    
     # RK4 STEP 1
     # fluid field velocity at location of particle
     (uf1, vf1) = fieldset.UV[time, particle.depth,
@@ -776,13 +824,13 @@ def MRSMAdvectionRK4_2D(particle, fieldset, time):
 
     # calculate spatial gradients fluid field
     (u_dxm1, v_dxm1) = fieldset.UV[time, particle.depth,
-                                   particle.lat, particle.lon-fieldset.delta_x]
+                                particle.lat, particle.lon-fieldset.delta_x]
     (u_dxp1, v_dxp1) = fieldset.UV[time, particle.depth,
-                                   particle.lat, particle.lon+fieldset.delta_x]
+                                particle.lat, particle.lon+fieldset.delta_x]
     (u_dym1, v_dym1) = fieldset.UV[time, particle.depth,
-                                   particle.lat-fieldset.delta_y, particle.lon]
+                                particle.lat-fieldset.delta_y, particle.lon]
     (u_dyp1, v_dyp1) = fieldset.UV[time, particle.depth,
-                                   particle.lat+fieldset.delta_y, particle.lon]
+                                particle.lat+fieldset.delta_y, particle.lon]
     dudx1 = (u_dxp1 - u_dxm1) * norm_deltax
     dudy1 = (u_dyp1 - u_dym1) * norm_deltay
     dvdx1 = (v_dxp1 - v_dxm1) * norm_deltax
@@ -799,7 +847,7 @@ def MRSMAdvectionRK4_2D(particle, fieldset, time):
 
     u1 = uf1 + Bterm_tau * (DuDt1 + ucor1)
     v1 = vf1 + Bterm_tau * (DvDt1 + vcor1)
-
+    
     # lon, lat for next step
     lon1 = particle.lon + 0.5 * u1 * particle.dt
     lat1 = particle.lat + 0.5 * v1 * particle.dt
@@ -817,14 +865,15 @@ def MRSMAdvectionRK4_2D(particle, fieldset, time):
     dvdt2 = (vf_tp2 - vf_tm2) * norm_deltat
 
     # calculate spatial gradients fluid field
+
     (u_dxm2, v_dxm2) = fieldset.UV[time1, particle.depth,
-                                   lat1, lon1 - fieldset.delta_x]
+                                lat1, lon1 - fieldset.delta_x]
     (u_dxp2, v_dxp2) = fieldset.UV[time1, particle.depth,
-                                   lat1, lon1 + fieldset.delta_x]
+                                lat1, lon1 + fieldset.delta_x]
     (u_dym2, v_dym2) = fieldset.UV[time1, particle.depth,
-                                   lat1 - fieldset.delta_y, lon1]
+                                lat1 - fieldset.delta_y, lon1]
     (u_dyp2, v_dyp2) = fieldset.UV[time1, particle.depth,
-                                   lat1 + fieldset.delta_y, lon1]
+                                lat1 + fieldset.delta_y, lon1]
     dudx2 = (u_dxp2 - u_dxm2) * norm_deltax
     dudy2 = (u_dyp2 - u_dym2) * norm_deltay
     dvdx2 = (v_dxp2 - v_dxm2) * norm_deltax
