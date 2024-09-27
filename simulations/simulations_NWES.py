@@ -14,3 +14,281 @@ in release/analytical_flowfields.py. We load this field from a netcdf file
 The drifters have an outer diamter of 24 cm which we use as radius of the particle. 
 The 
 """
+# import needed packages
+import numpy as np
+from parcels import FieldSet, ParticleSet, ParticleFile, Variable
+from parcels import AdvectionRK4, AdvectionRK4_3D
+from parcels.tools.converters import Geographic, GeographicPolar
+# from parcels import Variable
+from datetime import datetime, timedelta
+from helper import create_filelist, set_particles_region
+from kernels import InertialParticle2D, InertialParticle3D, deleteParticle
+from kernels import InitializeParticles2D, InitializeParticles3D
+from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D
+from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_3D
+from kernels import displace, set_displacement
+from kernels import too_close_to_edge, remove_at_bounds
+# set directories
+field_directory = ('/storage/shared/oceanparcels/input_data/CMEMS/'
+                   'NORTHWESTSHELF_ANALYSIS_FORECAST_PHY_004_013/')
+land_directory = ('/storage/shared/oceanparcels/'
+                  'output_data/data_Meike/NWES/')
+output_directory = ('/storage/shared/oceanparcels/'
+                    'output_data/data_Meike/MR_advection/NWES/')
+output_file_b = (output_directory + '{particle_type}/{loc}_'
+                 'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
+                 'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
+                 'B{B:04d}_tau{tau:04d}.zarr')
+output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
+                        'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
+                        'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4.zarr')
+
+
+##################################
+#       Simulation settings      #
+##################################
+
+# options are tracer, inertial (MR) or inertial_SM (MR slow manifold)
+particle_type = 'inertial_SM'
+# starting date
+starttime = datetime(2024, 1, 1, 0, 0, 0, 0)
+
+runtime =  timedelta(days=30)# timedelta(days=10)
+endtime = starttime + runtime 
+# integration timestep
+dt_timestep = timedelta(minutes=5)
+# write timestep
+dt_write = timedelta(hours=1)
+# Buoyancy (rho_particle/rho_fluid)
+B = 0.7
+# stokes relaxation time
+tau = 2.7 
+# use anti-beaching current
+anti_beaching = True
+# particle release location
+# option location is North sea, custom and doggersbank
+loc = 'north-sea'
+# set custom region:
+startlon_release = 1
+endlon_release = 4
+startlat_release = 54
+endlat_release = 56
+
+# Entire North Sea
+# startlon_release=1
+# endlon_release=7
+# startlat_release=51
+# endlat_release=58
+
+
+indices = {}
+
+
+#########################
+#       Set Fields      #
+#########################
+start_new_dataset = datetime(2023, 9, 1, 0, 0, 0, 0)
+dt_field = timedelta(days=1)
+# variables and dimensions (3D)
+variables = {'U': 'uo',
+             'V': 'vo'}
+
+dimensions = {'lat': 'lat',
+              'lon': 'lon',
+              'time': 'time'}
+
+if (starttime >= start_new_dataset): 
+    print('use new dataset (Nologin Spain)')
+    dimensions = {'lat': 'latitude',
+                  'lon': 'longitude',
+                  'time': 'time'}
+else:
+    print('use old dataset (UK Met Office)')
+
+if (starttime >= start_new_dataset):
+    dt_name_field = timedelta(days=1)
+    input_filename = ('CMEMS_v6r1_NWS_PHY_NRT_NL_01hav3D_'
+                      '{year_t:04d}{month_t:02d}{day_t:02d}_'
+                      '{year_t:04d}{month_t:02d}{day_t:02d}_'
+                      'R{year_tplus:04d}{month_tplus:02d}{day_tplus:02d}_HC01.nc')
+else:
+    dt_name_field = timedelta(days=2)
+    input_filename = ('metoffice_foam1_amm15_NWS_CUR_'
+                      'b{year_t:04d}{month_tr:02d}{day_t:02d}_'
+                      'hi{year_tplus:04d}{month_tplus:02d}{day_tplus:02d}.nc')
+    
+oceanfiles=create_filelist(field_directory, input_filename,
+                               starttime, endtime, dt_field, dt_name_field)
+    
+fieldset = FieldSet.from_netcdf(oceanfiles, variables, dimensions, indices=indices,
+                                    allow_time_extrapolation="False")
+
+
+if (anti_beaching == True):    
+    antibeachingfile = land_directory + 'anti_beaching_NWES_old.nc'
+    if(starttime >= start_new_dataset):
+        antibeachingfile = land_directory + 'anti_beaching_NWES_new.nc'
+    
+    filenames_anti_beaching = {'dispU': antibeachingfile,
+                            'dispV': antibeachingfile,
+                            'landmask': antibeachingfile,
+                            'distance2shore':antibeachingfile}
+    dimensions_anti_beaching = {'lat': 'lat',
+                                'lon': 'lon'}
+
+    variables_anti_beaching =  {'dispU': 'dispU',
+                    'dispV': 'dispV',
+                    'landmask':'landmask',
+                    'distance2shore' : 'distance2shore'}
+    fieldset_anti_beaching = FieldSet.from_netcdf(filenames_anti_beaching,
+                                                  variables_anti_beaching,
+                                                  dimensions_anti_beaching,
+                                                  indices=indices,
+                                                  mesh='spherical',
+                                                  allow_time_extrapolation="True")
+    fieldset_anti_beaching.dispU.units = GeographicPolar()
+    fieldset_anti_beaching.dispV.units = Geographic()
+
+    fieldset.add_field(fieldset_anti_beaching.dispU)
+    fieldset.add_field(fieldset_anti_beaching.dispV)
+    fieldset.add_field(fieldset_anti_beaching.landmask)
+    fieldset.add_field(fieldset_anti_beaching.distance2shore)
+
+# angular velocity earth in radians/second
+fieldset.add_constant('Omega_earth', 7.2921 * (10**-5))
+# gravitational acceleration
+fieldset.add_constant('g', 9.81)
+# grid spacing
+Delta_x = fieldset.U.grid.lon[1]-fieldset.U.grid.lon[0]
+Delta_y = fieldset.U.grid.lat[1]-fieldset.U.grid.lat[0]
+Delta_t = dt_timestep
+
+# stepsize for finite differences calculation
+delta_x = 0.5 * Delta_x
+delta_y = 0.5 * Delta_y
+print(f'delta_x = {delta_x}')
+
+fieldset.add_constant('delta_x', delta_x)
+fieldset.add_constant('delta_y', delta_y)
+
+lon_min = fieldset.U.grid.lon[1]
+lat_min = fieldset.U.grid.lat[1]
+lon_max = fieldset.U.grid.lon[-2]
+lat_max = fieldset.U.grid.lat[-2]
+print(f'lon domain = {lon_min} - {lon_max}')
+print(f'lon domain = {lat_min} - {lat_max}')
+
+fieldset.add_constant('lon_min', lon_min)
+fieldset.add_constant('lon_max', lon_max)
+
+fieldset.add_constant('lat_min', lat_min)
+fieldset.add_constant('lat_max', lat_max)
+###################################
+#       Initialize particles      #
+###################################
+inertialparticle = InertialParticle2D
+if (anti_beaching == True):
+    setattr(inertialparticle, 'dU',
+            Variable('dU', dtype=np.float32, to_write=False, initial=0))
+    setattr(inertialparticle, 'dV',
+            Variable('dV', dtype=np.float32, to_write=False, initial=0))
+    setattr(inertialparticle, 'd2s',
+            Variable('d2s', dtype=np.float32, to_write=False, initial=1e3))
+
+land_mask_file = land_directory + 'NWS_mask_land_old.nc'
+doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_old.nc' 
+if(starttime >= start_new_dataset):
+    land_mask_file = land_directory + 'NWS_mask_land_new.nc'
+    doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_new.nc' 
+
+# doggersbank_mask_file= land_directory +' NWS_mask_doggersbank.nc' # still needs to be created use depth
+if (loc == 'custom'):
+    lon_particles, lat_particles = set_particles_region(land_mask_file,
+                                                        startlon_release,
+                                                        endlon_release,
+                                                        startlat_release,
+                                                        endlat_release)
+elif( loc == 'north-sea'):
+    lon_particles, lat_particles = set_particles_region(land_mask_file,
+                                                        -2,
+                                                        9,
+                                                        51,
+                                                        58)
+elif (loc == 'doggersbank'):
+    lon_particles, lat_particles = set_particles_region(doggersbank_mask_file,
+                                                    1,
+                                                    4,
+                                                    54,
+                                                    56)
+else: 
+    raise ValueError(f'Error! {loc} should be custom/north-sea/doggersbank')
+
+nparticles = lon_particles.size
+# nparticles = 1  
+# lon_particles = 4
+# lat_particles = 56
+times = np.zeros(nparticles)
+Blist = np.full(nparticles, B)
+taulist = np.full(nparticles, tau)
+
+# setting kernels
+pset = ParticleSet.from_list(fieldset, InertialParticle2D, lon=lon_particles,
+                                 lat=lat_particles, time=times, B=Blist, tau=taulist)
+kernels_init = [InitializeParticles2D, deleteParticle]
+kernels = [too_close_to_edge]
+if(anti_beaching == True):
+    kernels.append(displace)
+if (particle_type == 'tracer'):
+    kernels.append(AdvectionRK4)
+elif (particle_type == 'inertial'):
+    kernels.append(MRAdvectionRK4_2D)
+elif (particle_type == 'inertial_SM'):
+    kernels.append(MRSMAdvectionRK4_2D)
+else:
+    raise ValueError(f'Error! {particle_type} should' +
+                    ' be tracer/inertial/inertial_SM')
+
+if(anti_beaching == True):
+    kernels.append(set_displacement)
+
+kernels.append(remove_at_bounds)
+
+if (particle_type == 'tracer'):
+    output_file = output_file_tracer_b.format(particle_type=particle_type,
+                                              loc=loc,
+                                              y_s=starttime.year,
+                                              m_s=starttime.month,
+                                              d_s=starttime.day,
+                                              y_e=endtime.year,
+                                              m_e=endtime.month,
+                                              d_e=endtime.day)
+else:
+    output_file = output_file_b.format(particle_type=particle_type,
+                                       loc=loc,
+                                       B=int(B * 1000),
+                                       tau=int(tau * 1000),
+                                       y_s=starttime.year,
+                                       m_s=starttime.month,
+                                       d_s=starttime.day,
+                                       y_e=endtime.year,
+                                       m_e=endtime.month,
+                                       d_e=endtime.day)
+
+print(output_file)
+pfile = ParticleFile(output_file, pset, outputdt=dt_write,
+                     chunks=(nparticles, 100))
+
+pfile.add_metadata('dt', str(dt_timestep.total_seconds()))
+pfile.add_metadata('delta_x', str(delta_x))  
+pfile.add_metadata('write_dt', str(dt_write.total_seconds()))
+pfile.add_metadata('runtime', str(runtime.total_seconds()))
+pfile.add_metadata('delta_y', str(delta_y))
+
+pfile.add_metadata("nparticles", nparticles)
+pfile.add_metadata("particle_type", particle_type)
+
+
+pset.execute(kernels_init, runtime=1, dt=1, verbose_progress=True)
+
+# run simulation
+pset.execute(kernels, endtime = endtime, dt=dt_timestep, output_file=pfile)
