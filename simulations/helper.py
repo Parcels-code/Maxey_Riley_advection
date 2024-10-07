@@ -20,6 +20,21 @@ def create_filelist(input_directory, str ,time_start,time_end,dt, dt_name):
         
     return files
 
+def displace_coordinates(lon, lat, d, B):
+    """
+    Function that displaces point(s) given by lon, lat over a distance d
+    (in meters) in direction B (angle measured clockwise in radians from the
+    north pole). The function returns the lon and lat coordinates of the
+    displaced point(s).
+    """
+    Rearth = 6371 * 10**3 # radius earth in m
+    lon_rad = lon * np.pi/180. 
+    lat_rad = lat * np.pi/180. 
+    lat_new = np.arcsin(np.sin(lat_rad) * np.cos(d / Rearth)+np.cos(lat_rad) * np.sin( d/ Rearth) * np.cos(B))
+    lon_new = lon_rad + np.arcsin( np.sin(d / Rearth) * np.sin(B) / np.cos(lat_new))
+    lat_new_angle = lat_new * 180/np.pi 
+    lon_new_angle = lon_new * 180/np.pi 
+    return lon_new_angle, lat_new_angle
 
 def getclosest_ij(lats, lons, latpt, lonpt):
     """Function to find the index of the closest point to a certain lon/lat value."""
