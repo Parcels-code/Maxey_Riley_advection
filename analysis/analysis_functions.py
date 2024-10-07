@@ -10,6 +10,7 @@ TO DO: ADD
 
 #import packages
 import numpy as np
+import xarray as xr
 
 def autocorr_time_trajectory(array):
     NPART, T = array.shape
@@ -51,7 +52,11 @@ def find_nearest(array, value):
 
 def Haversine_list(lon, lat):
     """ this function calculates the path length in km of a between 2 points using Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
-    """       
+    """      
+    if type(lon) == xr.DataArray: 
+        lon=lon.values
+    if type(lat) == xr.DataArray: 
+        lat=lat.values
     mean_radius_earth = 6371 #mean readius earth in km
     deg2rad=np.pi/180
     if(lon.ndim == 1):
