@@ -24,6 +24,8 @@ class InertialParticle3D(JITParticle):
     wp = Variable('wp', dtype=np.float32, to_write=False, initial=0.)
 
 
+
+
 def deleteParticle(particle, fieldset, time):
     """ Kernel for deleting particles if they throw an error other than through
     the surface
@@ -50,6 +52,18 @@ def displace(particle, fieldset, time):
         particle_dlon += particle.dU * particle.dt
         particle_dlat += particle.dV * particle.dt
 
+def measure_vorticity(particle, fieldset, time):
+    u_dxm, v_dxm = fieldset.UV[time, particle.depth,
+                                 particle.lat, particle.lon - fieldset.delta_x]
+    u_dxp, v_dxp = fieldset.UV[time, particle.depth,
+                                 particle.lat, particle.lon + fieldset.delta_x]
+    u_dym, v_dym = fieldset.UV[time, particle.depth,
+                                 particle.lat - fieldset.delta_y, particle.lon]
+    u_dyp, v_dyp = fieldset.UV[time, particle.depth,
+                                 particle.lat + fieldset.delta_y, particle.lon]
+    dvdx = (v_dxp - v_dxm) / (2 * fieldset.delta_x)
+    dudy = (u_dyp - u_dym) / (2 * fieldset.delta_y)
+    particle.vorticity = dvdx - dudy
 
 def remove_at_bounds(particle, fieldset, time):
     """Kernel for deleting particles if they are out of bounds in the small test run."""
