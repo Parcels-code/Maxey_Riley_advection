@@ -30,19 +30,50 @@ def autocorr_time_trajectory(array):
     return acfmean/acfmean[0]
 
 def Haversine(lon1,lat1, lon2, lat2):
-    """ this function calculates the path length in km of a between 2 points using Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
+    """ 
+    Function to calculate the path lenth in km between 2 points using the
+    Haversine formula. It takes as input: 
+    - lon1: longitude of point 1 in degrees
+    - lat1: latitude of point 1 in degrees
+    - lon2: longitude of point 2 in degrees
+    - lon2: latitude of point 2 in degrees
+
+    Source: https://en.wikipedia.org/wiki/Haversine_formula
     """       
-    mean_radius_earth = 6371 #mean readius earth in km
+    mean_radius_earth = 6371 
     deg2rad = np.pi/180
-    d = 2*mean_radius_earth*np.arcsin(np.sqrt(np.sin(0.5*(lat2 - lat1)*deg2rad)**2 + np.cos(lat2*deg2rad)*np.cos(lat1*deg2rad) * np.sin(0.5*(lon2-lon1)*deg2rad)**2))
+    arg = (np.sin(0.5 * (lat2 - lat1) * deg2rad)**2 +
+           np.cos(lat2 * deg2rad) * np.cos(lat1 * deg2rad) *
+           np.sin(0.5 * (lon2-lon1) * deg2rad)**2)
+    d = 2 * mean_radius_earth * np.arcsin(np.sqrt(arg))
     return d
 
-def zonal_dist(lon1,lon2,lat):
-    mean_radius_earth=6371 #mean readius earth in km
-    deg2rad=np.pi/180
-    d= 2 * mean_radius_earth * np.arcsin(np.sqrt(np.cos(lat*deg2rad) * np.cos( lat * deg2rad ) * np.sin( 0.5 * (lon1-lon2) * deg2rad )**2))
-    return d
 
+def zonal_dist(lon1, lon2, lat): 
+    """
+    Function that calculates the zonal distance between point1 and point 2
+    with sign in km, where the + is from west to east and - is from east
+    to west. It takes the following input:
+    - lon1: the longitude (in degrees) of the point 1
+    - lon2: the longitude (in degrees) of the point 2
+    - lat: the reference latitude (in degrees) of the 2 points
+    """
+    d =Haversine(lon1, lat, lon2, lat)
+    dif = lon2-lon1
+    return d * np.sign(dif)
+
+def meridional_dist(lat1,lat2):
+    """ 
+    Function that calculates the meridonal distnce with a sign in km
+    where the + is from south to north and - is from north to south
+    It takes the following input:
+    - lat1: the latitude (in degrees) of point 1
+    - lat2: the latitude (in degrees) of point 2
+    """
+    R = 6371.0 # mean radius of earth in km
+    deg2rad = np.pi / 180
+    dif = lat2 - lat1
+    return R * dif * deg2rad
 
 def find_nearest(array, value):
     array = np.asarray(array)
