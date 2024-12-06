@@ -27,7 +27,7 @@ class initGrid:
         """
         self.polygon = polygon
         self.h3_res = h3_res
-        self.hexagons = list(h3.polyfill(polygon, h3_res))
+        self.hexagons = list(h3.polygon_to_cells(h3.geo_to_h3shape(polygon), h3_res))
         self.process_hexagons()
     
     def process_hexagons(self):
@@ -35,9 +35,9 @@ class initGrid:
         Process the hexagons to integer labels and their centroids.
         """
         self.hexint = np.array([int(a, 16) for a in self.hexagons])
-        self.centroids = [h3.h3_to_geo(hex) for hex in self.hexagons]
-        self.centroid_lats = np.array([c[0] for c in self.centroids])
-        self.centroid_lons = np.array([c[1] for c in self.centroids])
+        self.centroids = [h3.cell_to_latlng(hex) for hex in self.hexagons]
+        self.centroid_lats = np.array([c[1] for c in self.centroids])
+        self.centroid_lons = np.array([c[0] for c in self.centroids])
         
     @property
     def size(self):
