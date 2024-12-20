@@ -26,12 +26,12 @@ from helper import create_filelist, set_particles_region, displace_coordinates
 from kernels import InertialParticle2D, InertialParticle3D, deleteParticle
 from kernels import InitializeParticles2D, InitializeParticles2D_MRSM, InitializeParticles3D
 from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D
-from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_3D
-from kernels import displace, set_displacement, measure_vorticity
+from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_2D_v2, MRSMAdvectionRK4_3D
+from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity
 from kernels import too_close_to_edge, remove_at_bounds
 
 # set directories
-field_directory = ('/storage/shared/oceanparcels/input_data/CMEMS/'
+field_directory = ('/storage/shared/oceanparcels/input_data/CopernicusMarineService/'
                    'NORTHWESTSHELF_ANALYSIS_FORECAST_PHY_004_013/')
 land_directory = ('/storage/shared/oceanparcels/'
                   'output_data/data_Meike/NWES/')
@@ -54,14 +54,13 @@ output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
 ##################################
 
 # options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq)
-particle_type = 'inertial_SM'
+particle_type = 'inertial_SM_v2'
 # starting date 
 starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
-release_times = np.array([  datetime(2023, 9, 1, 0, 0, 0, 0) ])# ,
-                             #datetime(2023, 10, 1, 0, 0, 0, 0),
-                           
-                         #  datetime(2023, 11, 1, 0, 0, 0, 0),
-                         #   datetime(2023, 12, 1, 0, 0, 0, 0)])
+release_times = np.array([  datetime(2023, 9, 1, 0, 0, 0, 0) ]) #,
+                            #datetime(2023, 10, 1, 0, 0, 0, 0),
+                            #datetime(2023, 11, 1, 0, 0, 0, 0),
+                            #datetime(2023, 12, 1, 0, 0, 0, 0)])
                           #datetime(2024, 1, 1, 0, 0, 0, 0),
                         #   datetime(2024, 2, 1, 0, 0, 0, 0)]) 
                     # [datetime(2023, 9, 1, 0, 0, 0, 0),
@@ -89,7 +88,8 @@ d = 100 # m
 # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
 land_handling = 'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 # anti_beaching = True
-save_vorticity = True
+save_vorticity = False
+save_fluid_velocity = False
 
 # particle release location
 # option location is North sea, custom, doggersbank, Norwegian trench
@@ -195,6 +195,7 @@ if (land_handling == 'anti_beaching'):
 
 # angular velocity earth in radians/second
 fieldset.add_constant('Omega_earth', 7.2921 * (10**-5))
+# fieldset.add_constant('Omega_earth', 0)
 
 # gravitational acceleration
 fieldset.add_constant('g', 9.81)
@@ -322,6 +323,8 @@ if(land_handling == 'anti_beaching'):
     kernels.append(displace)
 if(save_vorticity == True):
     kernels.append(measure_vorticity)
+if(save_fluid_velocity == True):
+    kernels.append(measure_fluid_velocity)
 if (particle_type == 'tracer'):
     kernels.append(AdvectionRK4)
 elif (particle_type == 'tracer_random'):
@@ -332,10 +335,12 @@ elif (particle_type == 'inertial_initSM'):
     kernels.append(MRAdvectionRK4_2D)
 elif (particle_type == 'inertial_SM'):
     kernels.append(MRSMAdvectionRK4_2D)
+elif (particle_type == 'inertial_SM_v2'):
+    kernels.append(MRSMAdvectionRK4_2D_v2)
 
 else:
     raise ValueError(f'Error! {particle_type} should' +
-                    ' be tracer/tracer_random/inertial/inertial_SM')
+                    ' be tracer/tracer_random/inertial/inertial_SM/inertial_SM_v2')
 
 if(land_handling == 'anti_beaching'):
     kernels.append(set_displacement)
@@ -345,6 +350,13 @@ kernels.append(remove_at_bounds)
 if (save_vorticity == True):
     setattr(inertialparticle, 'vorticity',
            Variable('vorticity', dtype=np.float32, to_write=True, initial=0))
+
+if (save_fluid_velocity == True):
+    setattr(inertialparticle, 'uf',
+           Variable('uf', dtype=np.float32, to_write=True, initial=0))
+    setattr(inertialparticle, 'vf',
+           Variable('vf', dtype=np.float32, to_write=True, initial=0))
+           
 
 for release_time in release_times:
     print(release_time)
@@ -402,7 +414,6 @@ for release_time in release_times:
     pset.execute(kernels_init, runtime=1, dt=1, verbose_progress=True)
     # I want to reset the time but it does not work
     pset.execute([deleteParticle], runtime=1, dt=-1, verbose_progress=True)
-
 
     # run simulation
     pset.execute(kernels, runtime=runtime, dt=dt_timestep, output_file=pfile)
