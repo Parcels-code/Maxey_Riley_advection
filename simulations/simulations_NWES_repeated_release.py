@@ -25,9 +25,9 @@ from datetime import datetime, timedelta
 from helper import create_filelist, set_particles_region, displace_coordinates
 from kernels import InertialParticle2D, InertialParticle3D, deleteParticle
 from kernels import InitializeParticles2D, InitializeParticles2D_MRSM, InitializeParticles3D
-from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D
-from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_2D_v2, MRSMAdvectionRK4_3D
-from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity
+from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D, MRAdvectionRK4_2D_Newtonian_drag
+from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_3D
+from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity
 from kernels import too_close_to_edge, remove_at_bounds
 
 # set directories
@@ -40,10 +40,10 @@ output_directory = ('/storage/shared/oceanparcels/'
 output_file_b = (output_directory + '{particle_type}/{loc}_'
                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                 'B{B:04d}_tau{tau:04d}_{land_handling}.zarr')
+                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}.zarr')
 output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                         'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
-                        'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}.zarr')
+                        'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_vorticity_{save_vorticity}.zarr')
 output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
                         'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                         'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_d{d:04d}_{land_handling}.zarr')
@@ -54,15 +54,15 @@ output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
 ##################################
 
 # options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq)
-particle_type = 'inertial_SM_v2'
+particle_type = 'inertial_Newton'
 # starting date 
 starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
-release_times = np.array([  datetime(2023, 9, 1, 0, 0, 0, 0) ]) #,
-                            #datetime(2023, 10, 1, 0, 0, 0, 0),
-                            #datetime(2023, 11, 1, 0, 0, 0, 0),
-                            #datetime(2023, 12, 1, 0, 0, 0, 0)])
+release_times = np.array([ datetime(2023, 9, 1, 0, 0, 0, 0)])
+#                             datetime(2023, 10, 1, 0, 0, 0, 0),
+#                             datetime(2023, 11, 1, 0, 0, 0, 0),
+#                             datetime(2023, 12, 1, 0, 0, 0, 0)])
                           #datetime(2024, 1, 1, 0, 0, 0, 0),
-                        #   datetime(2024, 2, 1, 0, 0, 0, 0)]) 
+                          #datetime(2024, 2, 1, 0, 0, 0, 0)]) 
                     # [datetime(2023, 9, 1, 0, 0, 0, 0),
                     #   datetime(2023, 10, 1, 0, 0, 0, 0)
 
@@ -82,34 +82,34 @@ dt_write = timedelta(hours=1)
 B = 0.68
 # stokes relaxation time
 tau = 2759.97
+# newton drag length scale
+ld = 0.499
 #random displacement distance starting position in meters
 d = 100 # m 
 # 
 # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
 land_handling = 'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
-# anti_beaching = True
+
 save_vorticity = False
-save_fluid_velocity = False
+save_fluid_velocity = True
+coriolis = True
 
 # particle release location
 # option location is North sea, custom, doggersbank, Norwegian trench
-loc = 'NWES' #'north-sea'
+loc = 'custom' #'NWES' #'north-sea'
 # options for grid (only does something for norwegian trench at the moment)
 # are square for which we use the gridpoint of the velocity field or hexagonal 
 grid = 'hex' 
 # set custom region:
-startlon_release = -10
-endlon_release = 0
+startlon_release = -15
+endlon_release = 9
 startlat_release = 47
-endlat_release = 52
-
+endlat_release = 60
 # Entire North Sea
 # startlon_release=1
 # endlon_release=7
 # startlat_release=51
 # endlat_release=58
-
-
 indices = {}
 
 
@@ -194,7 +194,13 @@ if (land_handling == 'anti_beaching'):
     fieldset.add_field(fieldset_anti_beaching.distance2shore)
 
 # angular velocity earth in radians/second
-fieldset.add_constant('Omega_earth', 7.2921 * (10**-5))
+if(coriolis==True):
+    fieldset.add_constant('Omega_earth', 7.2921 * (10**-5))
+elif(coriolis==False):
+    fieldset.add_constant('Omega_earth', 0)
+else:
+    ValueError(f"{coriolis} should be True or False")
+
 # fieldset.add_constant('Omega_earth', 0)
 
 # gravitational acceleration
@@ -302,7 +308,10 @@ nparticles = lon_particles.size
 # lat_particles = 56
 times = np.zeros(nparticles)
 Blist = np.full(nparticles, B)
-taulist = np.full(nparticles, tau)
+if(particle_type=='inertial_Newton'):
+    taulist = np.full(nparticles,ld)
+else:
+    taulist = np.full(nparticles, tau)
 
 # Move particles randomly from starting position 
 if (particle_type == 'tracer_random'):
@@ -312,7 +321,6 @@ if (particle_type == 'tracer_random'):
 
 
 # setting kernels
-
 if (particle_type == 'inertial_initSM'):
     kernels_init = [InitializeParticles2D_MRSM, deleteParticle]
 else:
@@ -324,13 +332,15 @@ if(land_handling == 'anti_beaching'):
 if(save_vorticity == True):
     kernels.append(measure_vorticity)
 if(save_fluid_velocity == True):
-    kernels.append(measure_fluid_velocity)
+    kernels.append(measure_slip_velocity)
 if (particle_type == 'tracer'):
     kernels.append(AdvectionRK4)
 elif (particle_type == 'tracer_random'):
     kernels.append(AdvectionRK4)
 elif (particle_type == 'inertial'):
     kernels.append(MRAdvectionRK4_2D)
+elif (particle_type == 'inertial_Newton'):
+    kernels.append(MRAdvectionRK4_2D_Newtonian_drag)
 elif (particle_type == 'inertial_initSM'):
     kernels.append(MRAdvectionRK4_2D)
 elif (particle_type == 'inertial_SM'):
@@ -373,7 +383,9 @@ for release_time in release_times:
                                                 y_e=endtime_particle.year,
                                                 m_e=endtime_particle.month,
                                                 d_e=endtime_particle.day,
-                                                land_handling=land_handling)
+                                                land_handling=land_handling,
+                                                coriolis = coriolis, 
+                                                save_vorticity = save_vorticity)
     elif (particle_type == 'tracer_random'):
         output_file = output_file_tracer_random_b.format(particle_type=particle_type,
                                                          d = d,
@@ -384,7 +396,9 @@ for release_time in release_times:
                                                 y_e=endtime_particle.year,
                                                 m_e=endtime_particle.month,
                                                 d_e=endtime_particle.day,
-                                                land_handling=land_handling)
+                                                land_handling=land_handling, 
+                                                coriolis = coriolis,
+                                                save_vorticity = save_vorticity)
     else:
         output_file = output_file_b.format(particle_type=particle_type,
                                         loc=loc,
@@ -396,7 +410,9 @@ for release_time in release_times:
                                         y_e=endtime_particle.year,
                                         m_e=endtime_particle.month,
                                         d_e=endtime_particle.day,
-                                        land_handling=land_handling)
+                                        land_handling=land_handling,
+                                        coriolis = coriolis, 
+                                        save_vorticity = save_vorticity)
 
     pfile = ParticleFile(output_file, pset, outputdt=dt_write,
                         chunks=(nparticles, 100))
@@ -409,6 +425,7 @@ for release_time in release_times:
     pfile.add_metadata("nparticles", nparticles)
     pfile.add_metadata("particle_type", particle_type)
     pfile.add_metadata('land_handling',land_handling)
+    pfile.add_metadata('coriolis',coriolis)
 
 
     pset.execute(kernels_init, runtime=1, dt=1, verbose_progress=True)
