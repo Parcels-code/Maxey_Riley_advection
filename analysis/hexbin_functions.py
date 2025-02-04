@@ -6,7 +6,6 @@ from matplotlib import gridspec
 
 import pandas as pd
 import h3
-from h3.unstable import vect  # used for hexgrid vectorization
 
 # Claudio: renamed the class to hexGrid to avoid confusion with other functions
 # I renamed plot_hex_hist to pcolorhex and made it a method of the hexGrid class
@@ -58,10 +57,15 @@ class hexGrid:
             index=self.matidx, data=np.tile(self.hexagons, self.n_levels)
         )
 
-    def compute_centroids(self):
-        self.centroids = [h3.h3_to_geo(hex) for hex in self.hexagons]
-        self.cen_lats = [c[1] for c in self.centroids]
-        self.cen_lons = [c[0] for c in self.centroids]
+    def process_hexagons(self):
+        """
+        Process the hexagons to integer labels and their centroids.
+        """
+        self.hexint = np.array([int(a, 16) for a in self.hexagons])
+        self.centroids = [h3.cell_to_latlng(hex) for hex in self.hexagons]
+        self.centroid_lats = np.array([c[0] for c in self.centroids])
+        self.centroid_lons = np.array([c[1] for c in self.centroids])
+
 
     def info(self):
         print(
@@ -89,10 +93,15 @@ class hexGrid:
         np.array
             Array of counts per bin, normalized if specified.
         """
+        interpolated_hexes_as_int=[]
+        for lat_i, lon_i in zip(lat[~np.isnan(lat)],lon[~np.isnan(lat)]):
+            interpolated_hexes_as_int.append(
+                h3.str_to_int(h3.latlng_to_cell(
 
-        interpolated_hexes_as_int = vect.geo_to_h3(
-            lon, lat, self.h3_res
-        )  # Interpolated hexes as integers
+                    lat_i, lon_i, self.h3_res
+                    )
+                )
+            )
         count = np.zeros(self.n_hex, dtype=np.uint(64))  # Initialize count array
 
         counted_unique_int, counted_unique_int_occurences = np.unique(
@@ -221,9 +230,9 @@ def plot_hexagons(
     """
     for i1, hex_ in enumerate(hexagons):
         # get latitude and longitude coordinates of hexagon
-        lat_long_coords = np.array(h3.h3_to_geo_boundary(str(hex_)))
-        x = lat_long_coords[:, 1]
-        y = lat_long_coords[:, 0]
+        lat_long_coords = np.array(h3.cell_to_boundary(str(hex_)))
+        y = lat_long_coords[:, 1]
+        x = lat_long_coords[:, 0]
 
         # ensure that all longitude values are between 0 and 360
         x_hexagon = np.append(x, x[0])
