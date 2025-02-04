@@ -9,8 +9,8 @@ class InertialParticle2D(JITParticle):
     B  = Variable('B', dtype=np.float32, to_write='once', initial=1.)
     tau = Variable('tau', dtype=np.float32, to_write='once', initial=1.)
     # velocity particles
-    up = Variable('up', dtype=np.float32, to_write=True, initial=0.)
-    vp = Variable('vp', dtype=np.float32, to_write=True, initial=0.)
+    up = Variable('up', dtype=np.float32, to_write=False, initial=0.)
+    vp = Variable('vp', dtype=np.float32, to_write=False, initial=0.)
 
 
 def InitializeParticles2D_MRSM(particle, fieldset, time):
@@ -80,6 +80,7 @@ def deleteParticle(particle, fieldset, time):
     """
     if particle.state >= 50:
         particle.delete()
+
 
 def set_displacement(particle, fieldset, time):
     """ 
@@ -552,7 +553,9 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     Advection of particles using Maxey-Riley equation in 2D without Basset
     history term and Faxen corrections without sinking or floating force.
     We use the newtonian drag formulation for particle reynolds
-    numbers > 3000. 
+    numbers > 3000. Note that we work with lengthscale here (tau now represents
+    lengthscale which is given in meters and should be converted to degrees in 
+    the calculation)
     The equation is numerically integrated using the 4th order runge kutta
     scheme for a 2nd order ODE equation. We appromate the time derivative at t 
     (1rst step rk4) with a forward finite difference and the time derivative
@@ -560,13 +563,13 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
 
     dependencies:
     - up, vp, particle velocity (particle variables)
-    - ld, drag length scale particle (particle variable)
+    - tau, drag length scale particle in m (particle variable)
     - B, buoyancy particle (particle variable)
     - Omega_earth, angular velocity earth (fieldset constant)
     - delta_x, delta_y, delta_t step for finite difference method gradients 
       (fieldset constants)
     """
-    ld_inv = 1. / particle.tau
+    ld_degrees_inv =  math.pi * fieldset.Rearth / (180 * particle.tau)
     Bterm = 3. / (1. + 2. * particle.B)
     Bterm2 = 2 * (1 - particle.B) / (1 + 2 * particle.B) 
     norm_deltax = 1.0 / (2.0 * fieldset.delta_x)
@@ -615,10 +618,11 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     upcor1 = -vp1 * f1
     vpcor1 = up1 * f1
 
+  
     # Newtonian drag force
-    uslip_mag1 = math.sqrt((uf1 - up1)**2+(vf1 - vp1))
-    udrag1 = ld_inv * uslip_mag1 * (uf1 - up1)
-    vdrag1 = ld_inv * uslip_mag1 * (vf1 - vp1)
+    uslip_mag1 = math.sqrt((uf1 - up1)**2 + (vf1 - vp1)**2)
+    udrag1 = ld_degrees_inv * math.sin(particle.lat * math.pi / 180)  * uslip_mag1 * (uf1 - up1)
+    vdrag1 = ld_degrees_inv * uslip_mag1 * (vf1 - vp1)
 
     # acceleration
     a_lon1 = Bterm * (DuDt1 + ucor1) + Bterm2 * upcor1 + udrag1
@@ -670,9 +674,9 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     vpcor2 = up2 * f2
 
     # Newtonian drag force
-    uslip_mag2 = math.sqrt((uf2 - up2)**2+(vf2 - vp2))
-    udrag2 = ld_inv * uslip_mag2 * (uf2 - up2)
-    vdrag2 = ld_inv * uslip_mag2 * (vf2 - vp2)
+    uslip_mag2 = math.sqrt((uf2 - up2)**2 + (vf2 - vp2)**2)
+    udrag2 = ld_degrees_inv * math.sin(lat1 * math.pi / 180) * uslip_mag2 * (uf2 - up2)
+    vdrag2 = ld_degrees_inv * uslip_mag2 * (vf2 - vp2)
 
     # acceleration
     a_lon2 = Bterm * (DuDt2 + ucor2) + Bterm2 * upcor2 + udrag2
@@ -725,9 +729,9 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     vpcor3 = up3 * f3
 
     # Newtonian drag force
-    uslip_mag3 = math.sqrt((uf3 - up3)**2+(vf3 - vp3))
-    udrag3 = ld_inv * uslip_mag3 * (uf3 - up3)
-    vdrag3 = ld_inv * uslip_mag3 * (vf3 - vp3)
+    uslip_mag3 = math.sqrt((uf3 - up3)**2 + (vf3 - vp3)**2)
+    udrag3 = ld_degrees_inv * math.sin(lat2 * math.pi / 180) * uslip_mag3 * (uf3 - up3)
+    vdrag3 = ld_degrees_inv * uslip_mag3 * (vf3 - vp3)
 
     # acceleration
     a_lon3 = Bterm * (DuDt3 + ucor3) + Bterm2 * upcor3 + udrag3
@@ -779,9 +783,9 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     vpcor4 = up4 * f4
 
     # Newtonian drag force
-    uslip_mag4 = math.sqrt((uf4 - up4)**2+(vf3 - vp4))
-    udrag4 = ld_inv * uslip_mag4 * (uf4 - up4)
-    vdrag4 = ld_inv * uslip_mag4 * (vf4 - vp4)
+    uslip_mag4 = math.sqrt((uf4 - up4)**2 + (vf4 - vp4)**2)
+    udrag4 = ld_degrees_inv * math.sin(lat3 * math.pi / 180)  * uslip_mag4 * (uf4 - up4)
+    vdrag4 = ld_degrees_inv * uslip_mag4 * (vf4 - vp4)
 
     # acceleration
     a_lon4 = Bterm * (DuDt4 + ucor4) + Bterm2 * upcor4 + udrag4
@@ -1395,6 +1399,8 @@ def MRSMAdvectionRK4_2D(particle, fieldset, time):
     # RK4 INTEGRATION STEP
     particle_dlon += (u1 + 2 * u2 + 2 * u3 + u4) * particle.dt / 6.0
     particle_dlat += (v1 + 2 * v2 + 2 * v3 + v4) * particle.dt / 6.0
+
+
 
 
 def MRSMAdvectionRK4_3D(particle, fieldset, time):
