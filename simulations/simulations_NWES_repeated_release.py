@@ -40,7 +40,7 @@ output_directory = ('/storage/shared/oceanparcels/'
 output_file_b = (output_directory + '{particle_type}/{loc}_'
                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}.zarr')
+                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}_dt_1min.zarr')
 output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                         'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                         'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_vorticity_{save_vorticity}.zarr')
@@ -54,7 +54,7 @@ output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
 ##################################
 
 # options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq)
-particle_type = 'inertial_Newton'
+particle_type = 'inertial'
 # starting date 
 starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
 release_times = np.array([ datetime(2023, 9, 1, 0, 0, 0, 0)])
@@ -75,7 +75,7 @@ runtime = timedelta(days=30)
 # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
 endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
 # integration timestep
-dt_timestep = timedelta(minutes=5)
+dt_timestep = timedelta(minutes=1)
 # write timestep
 dt_write = timedelta(hours=1)
 # Buoyancy (rho_particle/rho_fluid)
@@ -83,12 +83,12 @@ B = 0.68
 # stokes relaxation time
 tau = 2759.97
 # newton drag length scale
-ld = 0.499
+ld = 0.70 
 #random displacement distance starting position in meters
 d = 100 # m 
 # 
 # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
-land_handling = 'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
+land_handling = 'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 
 save_vorticity = False
 save_fluid_velocity = True
@@ -153,6 +153,7 @@ oceanfiles=create_filelist(field_directory, input_filename,
 
 fieldset = FieldSet.from_netcdf(oceanfiles, variables, dimensions, indices=indices,
                                         allow_time_extrapolation="False")
+
 if(land_handling == 'free_slip'):
     fieldset.interp_method = 'freeslip'
     fieldset.U.interp_method = 'freeslip'
@@ -205,6 +206,9 @@ else:
 
 # gravitational acceleration
 fieldset.add_constant('g', 9.81)
+#radius earth in meters
+fieldset.add_constant('Rearth', 6371 * 10**3)
+
 # grid spacing
 Delta_x = fieldset.U.grid.lon[1]-fieldset.U.grid.lon[0]
 Delta_y = fieldset.U.grid.lat[1]-fieldset.U.grid.lat[0]
