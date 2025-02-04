@@ -144,7 +144,7 @@ if (dim == '2D'):
     if (particle_type == 'tracer'):
         kernels.append(AdvectionRK4)
     elif (particle_type == 'inertial'):
-        kernels.append(MRAdvectionRK4_2D)
+        kernels.append([MRAdvectionRK4_2D])
     elif (particle_type == 'inertial_SM'):
         kernels.append(MRSMAdvectionRK4_2D)
     else:

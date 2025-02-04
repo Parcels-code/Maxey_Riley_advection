@@ -293,9 +293,9 @@ for release_time in release_times:
 
 
 
-    pset.execute(kernels_init, runtime=1, dt=1, verbose_progress=True)
+    pset.execute(kernels_init, runtime=dt_timestep, dt=dt_timestep, verbose_progress=True)
     # I want to reset the time but it does not work
-    pset.execute([deleteParticle], runtime=1, dt=-1, verbose_progress=True)
+    pset.execute([deleteParticle], runtime=dt_timestep, dt=-dt_timestep, verbose_progress=True)
 
     # run simulation
     pset.execute(kernels, runtime=runtime, dt=dt_timestep, output_file=pfile)

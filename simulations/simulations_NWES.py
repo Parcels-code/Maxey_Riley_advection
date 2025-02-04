@@ -49,12 +49,13 @@ output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
 ##################################
 
 # options are tracer, inertial (MR) or inertial_SM (MR slow manifold)
-particle_type = 'inertial_SM'
+particle_type = 'inertial'
 # starting date
-starttime = datetime(2024, 1, 1, 0, 0, 0, 0)
-
-runtime =  timedelta(days=30)# timedelta(days=10)
-endtime = starttime + runtime 
+starttime = datetime(2023, 11, 1, 0, 0, 0, 0)
+# settings for temporal releaste
+release_timestep = timedelta(days=1)
+runtime = timedelta(days=30)
+endtime = starttime + runtime
 # integration timestep
 dt_timestep = timedelta(minutes=5)
 # write timestep
@@ -66,8 +67,8 @@ tau = 2.7
 # use anti-beaching current
 anti_beaching = True
 # particle release location
-# option location is North sea, custom and doggersbank
-loc = 'north-sea'
+# option location is North sea, custom, doggersbank, Norwegian trench
+loc = 'norwegian-trench' #'north-sea'
 # set custom region:
 startlon_release = 1
 endlon_release = 4
@@ -197,9 +198,12 @@ if (anti_beaching == True):
 
 land_mask_file = land_directory + 'NWS_mask_land_old.nc'
 doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_old.nc' 
+norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_old.nc' 
+
 if(starttime >= start_new_dataset):
     land_mask_file = land_directory + 'NWS_mask_land_new.nc'
     doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_new.nc' 
+    norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_new.nc' 
 
 # doggersbank_mask_file= land_directory +' NWS_mask_doggersbank.nc' # still needs to be created use depth
 if (loc == 'custom'):
@@ -220,8 +224,14 @@ elif (loc == 'doggersbank'):
                                                     4,
                                                     54,
                                                     56)
+elif (loc == 'norwegian-trench'):
+    lon_particles, lat_particles = set_particles_region(norwegian_trench_mask_file,
+                                                    1,
+                                                    10,
+                                                    52,
+                                                    62)
 else: 
-    raise ValueError(f'Error! {loc} should be custom/north-sea/doggersbank')
+    raise ValueError(f'Error! {loc} should be custom/north-sea/doggersbank/norwegian-trench')
 
 nparticles = lon_particles.size
 # nparticles = 1  
@@ -231,9 +241,13 @@ times = np.zeros(nparticles)
 Blist = np.full(nparticles, B)
 taulist = np.full(nparticles, tau)
 
+
+
+
+
 # setting kernels
 pset = ParticleSet.from_list(fieldset, InertialParticle2D, lon=lon_particles,
-                                 lat=lat_particles, time=times, B=Blist, tau=taulist)
+                                 lat=lat_particles, time=times,  B=Blist, tau=taulist)
 kernels_init = [InitializeParticles2D, deleteParticle]
 kernels = [too_close_to_edge]
 if(anti_beaching == True):
@@ -252,6 +266,8 @@ if(anti_beaching == True):
     kernels.append(set_displacement)
 
 kernels.append(remove_at_bounds)
+
+
 
 if (particle_type == 'tracer'):
     output_file = output_file_tracer_b.format(particle_type=particle_type,
@@ -289,6 +305,11 @@ pfile.add_metadata("particle_type", particle_type)
 
 
 pset.execute(kernels_init, runtime=1, dt=1, verbose_progress=True)
+# I want to reset the time but it does not work
+pset.execute([deleteParticle], runtime=1, dt=-1, verbose_progress=True)
+
 
 # run simulation
-pset.execute(kernels, endtime = endtime, dt=dt_timestep, output_file=pfile)
+pset.execute(kernels, runtime = runtime, dt=dt_timestep, output_file=pfile)
+
+
