@@ -40,7 +40,7 @@ output_directory = ('/storage/shared/oceanparcels/'
 output_file_b = (output_directory + '{particle_type}/{loc}_'
                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}_dt_1min.zarr')
+                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}_dt_2min.zarr')
 output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                         'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                         'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_vorticity_{save_vorticity}.zarr')
@@ -70,14 +70,14 @@ release_times = np.array([ datetime(2023, 9, 1, 0, 0, 0, 0)])
                     #   datetime(2024, 4, 1, 0, 0, 0, 0)])
 # settings for temporal releaste
 
-runtime = timedelta(days=30)
+runtime = timedelta(hours=12)# timedelta(days=30)
 # total_runtime = timedelta(days=10)
 # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
 endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
 # integration timestep
-dt_timestep = timedelta(minutes=1)
+dt_timestep = timedelta(minutes=2)
 # write timestep
-dt_write = timedelta(hours=1)
+dt_write = timedelta(minutes=5)#timedelta(hours=1)
 # Buoyancy (rho_particle/rho_fluid)
 B = 0.68
 # stokes relaxation time
@@ -101,9 +101,9 @@ loc = 'custom' #'NWES' #'north-sea'
 # are square for which we use the gridpoint of the velocity field or hexagonal 
 grid = 'hex' 
 # set custom region:
-startlon_release = -15
-endlon_release = 9
-startlat_release = 47
+startlon_release = -14#-15
+endlon_release =8# 9
+startlat_release = 48# 47
 endlat_release = 60
 # Entire North Sea
 # startlon_release=1
