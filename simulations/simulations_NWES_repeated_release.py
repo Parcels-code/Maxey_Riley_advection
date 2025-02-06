@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 from helper import create_filelist, set_particles_region, displace_coordinates
 from kernels import InertialParticle2D, InertialParticle3D, deleteParticle
 from kernels import InitializeParticles2D, InitializeParticles2D_MRSM, InitializeParticles3D
-from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D, MRAdvectionRK4_2D_Newtonian_drag
+from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D, MRAdvectionRK4_2D_Newtonian_drag, MRAdvectionRK4_2D_drag_REp
 from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_3D
 from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity
 from kernels import too_close_to_edge, remove_at_bounds
@@ -40,7 +40,7 @@ output_directory = ('/storage/shared/oceanparcels/'
 output_file_b = (output_directory + '{particle_type}/{loc}_'
                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}_dt_2min.zarr')
+                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}_dt_5min_dtwrite_5min_slip_vel.zarr')
 output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                         'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                         'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_vorticity_{save_vorticity}.zarr')
@@ -53,8 +53,8 @@ output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
 #       Simulation settings      #
 ##################################
 
-# options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq)
-particle_type = 'inertial'
+# options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq), # inertial_drag_REp
+particle_type = 'inertial_drag_REp'
 # starting date 
 starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
 release_times = np.array([ datetime(2023, 9, 1, 0, 0, 0, 0)])
@@ -70,14 +70,14 @@ release_times = np.array([ datetime(2023, 9, 1, 0, 0, 0, 0)])
                     #   datetime(2024, 4, 1, 0, 0, 0, 0)])
 # settings for temporal releaste
 
-runtime = timedelta(hours=12)# timedelta(days=30)
+runtime =  timedelta(days=30)
 # total_runtime = timedelta(days=10)
 # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
 endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
 # integration timestep
-dt_timestep = timedelta(minutes=2)
+dt_timestep = timedelta(minutes=5)
 # write timestep
-dt_write = timedelta(minutes=5)#timedelta(hours=1)
+dt_write = timedelta(hours=1)#timedelta(hours=1)
 # Buoyancy (rho_particle/rho_fluid)
 B = 0.68
 # stokes relaxation time
@@ -91,12 +91,12 @@ d = 100 # m
 land_handling = 'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 
 save_vorticity = False
-save_fluid_velocity = True
+save_fluid_velocity = False
 coriolis = True
 
 # particle release location
 # option location is North sea, custom, doggersbank, Norwegian trench
-loc = 'custom' #'NWES' #'north-sea'
+loc = 'NWES' #'NWES' #'north-sea'
 # options for grid (only does something for norwegian trench at the moment)
 # are square for which we use the gridpoint of the velocity field or hexagonal 
 grid = 'hex' 
@@ -208,6 +208,9 @@ else:
 fieldset.add_constant('g', 9.81)
 #radius earth in meters
 fieldset.add_constant('Rearth', 6371 * 10**3)
+# kinematic viscosity water
+fieldset.add_constant('nu',1.3729308666017527*10**(-6))
+
 
 # grid spacing
 Delta_x = fieldset.U.grid.lon[1]-fieldset.U.grid.lon[0]
@@ -245,6 +248,11 @@ if (land_handling == 'anti_beaching'):
             Variable('dV', dtype=np.float32, to_write=False, initial=0))
     setattr(inertialparticle, 'd2s',
             Variable('d2s', dtype=np.float32, to_write=False, initial=1e3))
+    
+# add particle diameter to field
+if (particle_type == 'inertial_drag_REp'):
+        setattr(inertialparticle, 'd',
+            Variable('diameter', dtype=np.float32, to_write=False, initial=0.2))
 
 land_mask_file = land_directory + 'NWS_mask_land_old.nc'
 doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_old.nc' 
@@ -345,6 +353,8 @@ elif (particle_type == 'inertial'):
     kernels.append(MRAdvectionRK4_2D)
 elif (particle_type == 'inertial_Newton'):
     kernels.append(MRAdvectionRK4_2D_Newtonian_drag)
+elif (particle_type == 'inertial_drag_REp'):
+    kernels.append(MRAdvectionRK4_2D_drag_REp)
 elif (particle_type == 'inertial_initSM'):
     kernels.append(MRAdvectionRK4_2D)
 elif (particle_type == 'inertial_SM'):
