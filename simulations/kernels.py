@@ -585,10 +585,14 @@ def MRAdvectionRK4_2D_drag_REp(particle, fieldset, time):
 
     #calculate viscosity correction factor(taken constant over entire RK4 scheme)
     Rep = math.sqrt((up1-uf1)**2 +(vp1-vf1)**2) * particle.diameter / (fieldset.nu)
-    f_REp = (1 + 
-             Rep/24 * 2.6 * (Rep / 5.) / (1 + (Rep/5.)**(1.52)) +
-             Rep/24 * 0.411 * (Rep / (2.63 * 10**5))**(-7.94) / (1 + (Rep / (2.63 * 10**5))**(-8)) +
-             Rep/24 * 0.25 * (Rep/(10**6)) / (1 + (Rep / (10**6))))
+    if(Rep>1):
+        f_REp = (1 + 
+                Rep/24 * 2.6 * (Rep / 5.) / (1 + (Rep/5.)**(1.52)) +
+                Rep/24 * 0.411 * (Rep / (2.63 * 10**5))**(-7.94) / (1 + (Rep / (2.63 * 10**5))**(-8)) +
+                Rep/24 * 0.25 * (Rep/(10**6)) / (1 + (Rep / (10**6))))
+    else:
+        f_REp=1
+    
     tau_inv = 36 * fieldset.nu * f_REp /( (1. + 2. * particle.B) * particle.diameter**2)
 
     # calculate time derivative of fluid field

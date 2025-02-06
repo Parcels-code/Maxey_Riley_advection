@@ -40,7 +40,7 @@ output_directory = ('/storage/shared/oceanparcels/'
 output_file_b = (output_directory + '{particle_type}/{loc}_'
                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}_dt_5min_dtwrite_5min_slip_vel.zarr')
+                 'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_vorticity_{save_vorticity}.zarr')
 output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                         'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                         'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_vorticity_{save_vorticity}.zarr')
