@@ -574,6 +574,29 @@ def MRAdvectionRK4_2D_drag_REp(particle, fieldset, time):
     norm_deltay = 1.0 / (2.0 * fieldset.delta_y)
     norm_deltat = 1.0 / (1.0 * particle.dt)
 
+
+    #VELOCITY DEPENDEND DRAG STOKES TIME
+    #get velocity flow and particle in m/s
+    (uf_ms, vf_ms) = fieldset.UV.eval(time, particle.depth, particle.lat,
+                              particle.lon, applyConversion=False)
+    up_ms = particle.up * fieldset.Rearth * math.sin(particle.lat * math.pi /180) *  math.pi / 180.
+    vp_ms = particle.vp * fieldset.Rearth * math.pi / 180
+    
+    #calculate Reynolds number
+    Rep = math.sqrt((up_ms-uf_ms)**2 +(vp_ms-vf_ms)**2) * particle.diameter / (fieldset.nu)
+
+    #calulate correction factor
+    if(Rep>1):
+        f_REp = (1 + 
+                Rep/24 * 2.6 * (Rep / 5.) / (1 + (Rep/5.)**(1.52)) +
+                Rep/24 * 0.411 * (Rep / (2.63 * 10**5))**(-7.94) / (1 + (Rep / (2.63 * 10**5))**(-8)) +
+                Rep/24 * 0.25 * (Rep/(10**6)) / (1 + (Rep / (10**6))))
+    else:
+        f_REp=1
+
+    # inverse stokes time based on correction factor
+    tau_inv = 36 * fieldset.nu * f_REp /( (1. + 2. * particle.B) * particle.diameter**2)
+
     # RK4 STEP 1
     # read in velocity at location of particle
     (uf1, vf1) = fieldset.UV[time,
@@ -583,17 +606,7 @@ def MRAdvectionRK4_2D_drag_REp(particle, fieldset, time):
     up1 = particle.up
     vp1 = particle.vp
 
-    #calculate viscosity correction factor(taken constant over entire RK4 scheme)
-    Rep = math.sqrt((up1-uf1)**2 +(vp1-vf1)**2) * particle.diameter / (fieldset.nu)
-    if(Rep>1):
-        f_REp = (1 + 
-                Rep/24 * 2.6 * (Rep / 5.) / (1 + (Rep/5.)**(1.52)) +
-                Rep/24 * 0.411 * (Rep / (2.63 * 10**5))**(-7.94) / (1 + (Rep / (2.63 * 10**5))**(-8)) +
-                Rep/24 * 0.25 * (Rep/(10**6)) / (1 + (Rep / (10**6))))
-    else:
-        f_REp=1
     
-    tau_inv = 36 * fieldset.nu * f_REp /( (1. + 2. * particle.B) * particle.diameter**2)
 
     # calculate time derivative of fluid field
     (uf_tp1, vf_tp1) = fieldset.UV[time+particle.dt,
