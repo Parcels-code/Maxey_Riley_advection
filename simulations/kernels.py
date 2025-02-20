@@ -561,7 +561,7 @@ def MRAdvectionRK4_2D(particle, fieldset, time):
     particle_dlon += (up1 + 2 * up2 + 2 * up3 + up4) * particle.dt / 6.0
     particle_dlat += (vp1 + 2 * vp2 + 2 * vp3 + vp4) * particle.dt / 6.0
 
-def MRAdvectionRK4_2D_drag_REp(particle, fieldset, time):
+def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     """
     Advection of particles using Maxey-Riley equation in 2D without Basset
     history term and Faxen corrections without sinking or floating force.
@@ -603,14 +603,7 @@ def MRAdvectionRK4_2D_drag_REp(particle, fieldset, time):
     #save Reynolds number
     # particle.Rep = Rep
     #calulate correction factor
-    if(Rep>0.5):
-        # f_REp = (1 + 
-        #         Rep/24 * 2.6 * (Rep / 5.) / (1 + (Rep/5.)**(1.52)) +
-        #         Rep/24 * 0.411 * (Rep / (2.63 * 10**5))**(-7.94) / (1 + (Rep / (2.63 * 10**5))**(-8)) +
-        #         Rep/24 * 0.25 * (Rep/(10**6)) / (1 + (Rep / (10**6))))
-        f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
-    else:
-        f_REp=1
+    f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
 
     # inverse stokes time based on correction factor
     tau_inv = 36 * fieldset.nu * f_REp /( (1. + 2. * particle.B) * particle.diameter**2)
@@ -836,7 +829,7 @@ def MRAdvectionRK4_2D_drag_REp(particle, fieldset, time):
     particle_dlat += (vp1 + 2 * vp2 + 2 * vp3 + vp4) * particle.dt / 6.0
 
 
-def MRAdvectionRK4_2D_drag_REp_constant(particle, fieldset, time):
+def MRAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     """
     Advection of particles using Maxey-Riley equation in 2D without Basset
     history term and Faxen corrections without sinking or floating force.
@@ -1958,7 +1951,7 @@ def MRSMAdvectionRK4_2D(particle, fieldset, time):
     particle.up =(u1 + 2 * u2 + 2 * u3 + u4) / 6.0
     particle.vp = (v1 + 2 * v2 + 2 * v3 + v4) /6.0
 
-def MRSMAdvectionRK4_2D_drag_REp(particle, fieldset, time):
+def MRSMAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     """
     Advection of particles using the slow manifold approximation of the Maxey-
     Riley equation in 2D without Basset history term and Faxen corrections. The
@@ -1977,25 +1970,16 @@ def MRSMAdvectionRK4_2D_drag_REp(particle, fieldset, time):
     """
     #VELOCITY DEPENDEND DRAG STOKES TIME
     #get velocity flow and particle in m/s
-    (uf, vf) = fieldset.UV.eval(time, particle.depth, particle.lat,
-                              particle.lon,applyConversion=False)
     
     up = particle.up * fieldset.Rearth * math.cos(particle.lat * math.pi /180) *  math.pi / 180.
     vp = particle.vp * fieldset.Rearth * math.pi / 180
     
     #calculate Reynolds number
-    Rep = math.sqrt((up-uf)**2 +(vp-vf)**2) * particle.diameter / (fieldset.nu)
-
+    Rep = math.sqrt((up)**2 +(vp)**2) * particle.diameter / (fieldset.nu)
 
     #calulate correction factor
-    if(Rep>1):
-        # f_REp = (1 + 
-        #         Rep/24 * 2.6 * (Rep / 5.) / (1 + (Rep/5.)**(1.52)) +
-        #         Rep/24 * 0.411 * (Rep / (2.63 * 10**5))**(-7.94) / (1 + (Rep / (2.63 * 10**5))**(-8)) +
-        #         Rep/24 * 0.25 * (Rep/(10**6)) / (1 + (Rep / (10**6))))
-        f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
-    else:
-        f_REp=1
+    f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
+  
 
     # Stokes time based on correction factor
     tau = ( (1. + 2. * particle.B) * particle.diameter**2) /(36 * fieldset.nu * f_REp)
@@ -2176,10 +2160,10 @@ def MRSMAdvectionRK4_2D_drag_REp(particle, fieldset, time):
     # RK4 INTEGRATION STEP
     particle_dlon += (u1 + 2 * u2 + 2 * u3 + u4) * particle.dt / 6.0
     particle_dlat += (v1 + 2 * v2 + 2 * v3 + v4) * particle.dt / 6.0
-    particle.up = (u1 + 2 * u2 + 2 * u3 + u4) / 6.0
-    particle.vp = (v1 + 2 * v2 + 2 * v3 + v4) / 6.0
+    particle.up = (u1 - uf1) #+ 2 * u2 + 2 * u3 + u4) / 6.0
+    particle.vp =  (v1 - vf1)# 2 * v2 + 2 * v3 + v4) / 6.0
 
-def MRSMAdvectionRK4_2D_drag_REp_constant(particle, fieldset, time):
+def MRSMAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     """
     Advection of particles using the slow manifold approximation of the Maxey-
     Riley equation in 2D without Basset history term and Faxen corrections. The
