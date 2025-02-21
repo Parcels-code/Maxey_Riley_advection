@@ -12,6 +12,19 @@ TO DO: ADD
 import numpy as np
 import xarray as xr
 
+def calc_tidal_av(coordinates, window):
+    """
+    calculate tidal average signal over window steps. Depends on:
+    - coordinates:xr dataarray with dimensions trajectory and obs
+    - window: (int) number of succesive observations over the coordinates
+      wil be averagd.
+
+    output: xr dataarray
+    """
+    cs = coordinates.cumsum(dim='obs',skipna=False)
+    mean = (cs-cs.roll(obs=window))/float(window)
+    return mean
+
 def autocorr_time_trajectory(array):
     NPART, T = array.shape
 
@@ -102,6 +115,18 @@ def Haversine_list(lon, lat):
     
     return d
 
+def Haversine_list_xr(lon, lat):
+    """ this function calculates the path length in km of a between 2 points using Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
+    """      
+
+    mean_radius_earth = 6371 #mean readius earth in km
+    deg2rad=np.pi/180
+    londif = lon.diff(dim='obs')#np.diff(lon)
+    latdif = lat.diff(dim='obs')
+    d = 2 * mean_radius_earth * np.arcsin( np.sqrt(np.sin(0.5*latdif*deg2rad)**2 + np.cos(lat[:-1]*deg2rad) * np.cos(lat[1:]*deg2rad)* np.sin(0.5*londif*deg2rad)**2 ))
+    return d
+
+
 
 
 def trajectory_length(lon,lat):
@@ -116,14 +141,24 @@ def trajectory_length(lon,lat):
         traj=np.cumsum(d,axis=1)
     return traj
 
+def trajectory_length_xr(lon,lat):
+    """
+    This function calculates the along track length/trajectory length in km
+    """
+    
+    d = Haversine_list_xr(lon, lat)
+    traj=d.cumsum(dim='obs',skipna=False)
+    return traj
+
 
     
 
-def make_PDF(x,nbins,norm,min=10000,max=-10000):
-    
-    if(min==10000):
+def make_PDF(x,nbins,norm,min=100000,max=-100000 ):
+    # remove nans
+    x =x[~np.isnan(x)]
+    if(min==100000):
         min=np.nanmin(x)
-    if(max==-10000):
+    if(max==-100000):
         max=np.nanmax(x)
     
     dx=(max-min)/nbins
