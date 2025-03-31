@@ -26,7 +26,8 @@ from kernels import InitializeParticles2D, InitializeParticles2D_MRSM, Initializ
 from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D, MRAdvectionRK4_2D_Newtonian_drag, MRAdvectionRK4_2D_drag_Rep, MRSMAdvectionRK4_2D_drag_Rep
 from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_3D, MRSMAdvectionRK4_2D_drag_Rep_constant, MRAdvectionRK4_2D_drag_Rep_constant
 from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity
-from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_SM
+from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_SM, measure_coriolis_force
+from kernels import measure_acceleration_force, measure_particle_velocity, measure_fluid_velocity
 from particle_characteristics_functions import factor_drag_white1991
 
 field_directory = ('/storage/shared/oceanparcels/input_data/CopernicusMarineService/'
@@ -51,17 +52,17 @@ output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
 ##################################
 #       Simulation settings      #
 ##################################
-
+# only works for full MR not for slow manifold MR 
 # options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq), # inertial_drag_REp
-particle_type = 'inertial_SM'#'inertial_drag_Rep'#'inertial_drag_Rep' 'inertial_SM_drag_Rep' #'inertial_Rep_constant' #'inertial_SM_drag_REp'#'inertial_SM_drag_REp'# 'inertial_drag_REp'
+particle_type = 'inertial_Rep_constant'#'inertial_Rep_constant'#'inertial_drag_Rep'#'inertial_drag_Rep' 'inertial_SM_drag_Rep' #'inertial_Rep_constant' #'inertial_SM_drag_REp'#'inertial_SM_drag_REp'# 'inertial_drag_REp'
 # starting date 
 starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
 release_times = np.array([  datetime(2023, 9, 1, 0, 0, 0, 0) ])
 
 runtime = timedelta(hours=2) 
 endtime = release_times[-1]+runtime+timedelta(days=1) 
-dt_timestep = timedelta(seconds=10)
-dt_write =timedelta(seconds=10)
+dt_timestep = timedelta(seconds=5)
+dt_write =timedelta(seconds=5)
 
 B = 0.68
 tau = 2759.97
@@ -71,7 +72,11 @@ C_Rep = factor_drag_white1991(Rep)
 land_handling = 'anti_beaching'
 
 save_vorticity = False
+save_slip_velocity = True
 save_fluid_velocity = True
+save_particle_velocity = True
+save_coriolis_force = True
+save_acceleration_force = True 
 coriolis = True
 
 
@@ -218,6 +223,8 @@ if (particle_type in ('inertial_Rep_constant', 'inertial_SM_Rep_constant')):
 
 
 
+
+
 land_mask_file = land_directory + 'NWS_mask_land_new.nc'
 doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_new.nc' 
 norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_new.nc' 
@@ -233,7 +240,7 @@ if(loc == 'NWES'):
         lon_particles=ds['lon'].values
         lat_particles=ds['lat'].values
 nparticles = lon_particles.size
-select = random.sample(range(0, nparticles), 1000) # 100 particles
+select = random.sample(range(0, nparticles), 1000) # 100 particles # 1000
 nparticles = 1000
 lon_particles = lon_particles[select]
 lat_particles = lat_particles[select]
@@ -252,11 +259,17 @@ if(land_handling == 'anti_beaching'):
     kernels.append(displace)
 if(save_vorticity == True):
     kernels.append(measure_vorticity)
+if(save_slip_velocity == True):
+    kernels.append(measure_slip_velocity)
+if(save_particle_velocity == True):
+    kernels.append(measure_particle_velocity)
 if(save_fluid_velocity == True):
-    if(particle_type in ('inertial_SM_Rep_constant', 'inertial_SM_drag_Rep')):
-        kernels.append(measure_slip_velocity_SM)
-    else:
-        kernels.append(measure_slip_velocity)
+    kernels.append(measure_fluid_velocity)
+if(save_coriolis_force == True):
+    kernels.append(measure_coriolis_force)
+if(save_acceleration_force == True):
+    kernels.append(measure_acceleration_force)
+
 if (particle_type == 'tracer'):
     kernels.append(AdvectionRK4)
 elif (particle_type == 'tracer_random'):
@@ -287,14 +300,43 @@ if(land_handling == 'anti_beaching'):
     kernels.append(set_displacement)
 
 kernels.append(remove_at_bounds) 
+print(kernels)
+
+if (save_coriolis_force == True):
+    setattr(inertialparticle, 'fcor_lon',
+    Variable('fcor_lon', dtype=np.float32, to_write=True, initial=0))
+    setattr(inertialparticle, 'fcor_lat',
+    Variable('fcor_lat', dtype=np.float32, to_write=True, initial=0))
 
 
+if (save_acceleration_force == True):
+    setattr(inertialparticle, 'facc_lon',
+    Variable('facc_lon', dtype=np.float32, to_write=True, initial=0))
+    setattr(inertialparticle, 'facc_lat',
+    Variable('facc_lat', dtype=np.float32, to_write=True, initial=0))
+
+
+if (save_slip_velocity == True):
+    print('save uslip and vslip')
+    setattr(inertialparticle, 'uslip',
+           Variable('uslip', dtype=np.float32, to_write=True, initial=0))
+    setattr(inertialparticle, 'vslip',
+           Variable('vslip', dtype=np.float32, to_write=True, initial=0))
+    
 if (save_fluid_velocity == True):
-    print('save uf and vf')
-    setattr(inertialparticle, 'uf',
-           Variable('uf', dtype=np.float32, to_write=True, initial=0))
-    setattr(inertialparticle, 'vf',
-           Variable('vf', dtype=np.float32, to_write=True, initial=0))
+    print('save ufluid and vfluid')
+    setattr(inertialparticle, 'ufluid',
+           Variable('ufluid', dtype=np.float32, to_write=True, initial=0))
+    setattr(inertialparticle, 'vfluid',
+           Variable('vfluid', dtype=np.float32, to_write=True, initial=0))
+    
+if (save_fluid_velocity == True):
+    print('save uparticle and vparticle')
+    setattr(inertialparticle, 'uparticle',
+           Variable('uparticle', dtype=np.float32, to_write=True, initial=0))
+    setattr(inertialparticle, 'vparticle',
+           Variable('vparticle', dtype=np.float32, to_write=True, initial=0))
+
            
 
 for release_time in release_times:
