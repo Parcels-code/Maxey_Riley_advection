@@ -45,7 +45,7 @@ output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
 #       Simulation settings      #
 ##################################
 # options are tracer, inertial, inertial_SM, inertial_drag_Rep, inertial_SM_drag_Rep
-particle_type = 'inertial_SM_drag_Rep'
+particle_type = 'inertial_drag_Rep'
 land_handling = 'anti_beaching'
 time_resolution = 'daily'
 loc = 'NWES'
@@ -229,11 +229,11 @@ kernels.append(remove_at_bounds)
 
 
 if (save_fluid_velocity == True):
-    print('save uf and vf')
-    setattr(inertialparticle, 'uf',
-           Variable('uf', dtype=np.float32, to_write=True, initial=0))
-    setattr(inertialparticle, 'vf',
-           Variable('vf', dtype=np.float32, to_write=True, initial=0))
+    print('save uslip and vslip')
+    setattr(inertialparticle, 'uslip',
+           Variable('uslip', dtype=np.float32, to_write=True, initial=0))
+    setattr(inertialparticle, 'vslip',
+           Variable('vslip', dtype=np.float32, to_write=True, initial=0))
 
 times = (release_time-starttime).total_seconds()
 pset = ParticleSet.from_list(fieldset, inertialparticle, lon=lon_particles,
