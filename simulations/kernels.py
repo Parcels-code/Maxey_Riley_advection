@@ -148,8 +148,18 @@ def measure_fluid_velocity(particle, fieldset, time):
     uf, vf = fieldset.UV.eval(time, particle.depth, particle.lat,
                               particle.lon, applyConversion=False)
     
-    particle.uf = uf
-    particle.vf = vf
+    particle.ufluid = uf
+    particle.vfluid = vf
+
+
+def measure_particle_velocity(particle, fieldset, time):
+    """
+    Kernel to measure the velocity (2D) of the fluid at the location 
+    of the particle
+    """    
+    particle.uparticle = (particle.up)* fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    particle.vparticle = (particle.vp) * fieldset.Rearth * math.pi / 180. 
+
 
 def measure_slip_velocity(particle, fieldset, time):
     """f
@@ -161,8 +171,78 @@ def measure_slip_velocity(particle, fieldset, time):
 
 
 
-    particle.uf = (particle.up - uf)* fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
-    particle.vf = (particle.vp - vf) * fieldset.Rearth * math.pi / 180. 
+    particle.uslip= (particle.up - uf)* fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    particle.vslip = (particle.vp - vf) * fieldset.Rearth * math.pi / 180. 
+
+    
+def measure_coriolis_force(particle, fieldset, time):
+    """f
+    Kernel to measure the coriolis force (2D) of the fluid at the location 
+    of the particle
+    """
+    Bterm = 3. / (1. + 2. * particle.B)
+    Bterm2 = 2 * (1 - particle.B) / (1 + 2 * particle.B) 
+    uf, vf = fieldset.UV[time, particle.depth, particle.lat,
+                              particle.lon]
+
+    # coriolis force
+    f = 2 * fieldset.Omega_earth * math.sin(particle.lat * math.pi / 180)
+    ucor = -(vf - particle.vp) * f
+    vcor = (uf - particle.up) * f
+    upcor = -particle.vp * f
+    vpcor = particle.up * f
+    fcor_u = Bterm * ucor+ Bterm2 * upcor
+    fcor_v = Bterm * vcor + Bterm2 * vpcor
+    particle.fcor_lon = fcor_u * fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    particle.fcor_lat = fcor_v * fieldset.Rearth * math.pi / 180. 
+
+def measure_acceleration_force(particle, fieldset, time):
+    """
+    Kernel to measure the acceleration force (2D) of the fluid at the location 
+    of the particle
+    """
+    Bterm = 3. / (1. + 2. * particle.B)
+    norm_deltax = 1.0 / (2.0 * fieldset.delta_x)
+    norm_deltay = 1.0 / (2.0 * fieldset.delta_y)
+    norm_deltat = 1.0 / (1.0 * particle.dt)
+
+
+    # read in velocity at location of particle
+    (uf1, vf1) = fieldset.UV[time,
+                             particle.depth, particle.lat, particle.lon]
+
+
+    # calculate time derivative of fluid field
+    (uf_tp1, vf_tp1) = fieldset.UV[time+particle.dt,
+                                   particle.depth, particle.lat, particle.lon]
+    (uf_tm1, vf_tm1) = fieldset.UV[time,
+                                   particle.depth, particle.lat, particle.lon]
+    dudt1 = (uf_tp1 - uf_tm1) * norm_deltat
+    dvdt1 = (vf_tp1 - vf_tm1) * norm_deltat
+
+    # calculate spatial gradients fluid field
+    (u_dxm1, v_dxm1) = fieldset.UV[time, particle.depth, particle.lat,
+                                   particle.lon - fieldset.delta_x]
+    (u_dxp1, v_dxp1) = fieldset.UV[time, particle.depth, particle.lat,
+                                   particle.lon + fieldset.delta_x]
+    (u_dym1, v_dym1) = fieldset.UV[time, particle.depth, particle.lat
+                                   - fieldset.delta_y, particle.lon]
+    (u_dyp1, v_dyp1) = fieldset.UV[time, particle.depth, particle.lat
+                                   + fieldset.delta_y, particle.lon]
+    dudx1 = (u_dxp1 - u_dxm1) * norm_deltax
+    dudy1 = (u_dyp1 - u_dym1) * norm_deltay
+    dvdx1 = (v_dxp1 - v_dxm1) * norm_deltax
+    dvdy1 = (v_dyp1 - v_dym1) * norm_deltay
+
+    # caluclate material derivative fluid
+    DuDt1 = dudt1 + uf1 * dudx1 + vf1 * dudy1
+    DvDt1 = dvdt1 + uf1 * dvdx1 + vf1 * dvdy1
+
+     # acceleration force
+    facc_lon = Bterm * DuDt1 
+    facc_lat = Bterm * DvDt1 
+    particle.facc_lon = facc_lon * fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    particle.facc_lat = facc_lat * fieldset.Rearth * math.pi / 180. 
 
 
 def measure_slip_velocity_SM(particle, fieldset, time):
