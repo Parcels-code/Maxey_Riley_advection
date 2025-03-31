@@ -33,3 +33,17 @@ def trajectory_length(lon : xr.DataArray,lat : xr.DataArray) -> xr.DataArray:
     d = Haversine_list(lon, lat)
     traj=d.cumsum(dim='obs',skipna=False)
     return traj
+
+
+def derivative_backward(var : xr.DataArray, dt: float) -> xr.DataArray:
+    varmin = var.shift(obs=-1)
+    return (var-varmin)/(1 * dt)
+
+def derivative_forward(var : xr.DataArray, dt: float) -> xr.DataArray:
+    varplus = var.shift(obs=1)
+    return (varplus-var)/(1 * dt)
+
+def derivative_middle(var : xr.DataArray, dt: float) -> xr.DataArray:
+    varmin = var.shift(obs=-1)
+    varplus = var.shift(obs=1)
+    return (varplus-varmin)/(2 * dt)
