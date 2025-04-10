@@ -67,18 +67,19 @@ def run_experiment(rep,year,month,day):
 
     output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                             'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
-                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_vorticity_{save_vorticity}.zarr')
+                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}.zarr')
     output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
                             'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                             'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_d{d:04d}_{land_handling}.zarr')
 
-
+    ### set random seed for random displacemnt (I want the same displacement everytime I displace particles randomly (not varying per month))
+    np.random.seed(0)
     ##################################
     #       Simulation settings      #
     ##################################
 
     # options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq), # inertial_drag_REp
-    particle_type = 'inertial_Rep_constant'#'inertial_drag_Rep'# 'inertial_drag_REp'#'inertial_SM_drag_REp' #'inertial_SM_drag_REp'#'inertial_SM_drag_REp'# 'inertial_drag_REp'
+    particle_type = 'inertial_SM_Rep_constant'#'tracer_random'# 'tracer'# 'inertial_Rep_constant'#'inertial_drag_Rep'# 'inertial_drag_REp'#'inertial_SM_drag_REp' #'inertial_SM_drag_REp'#'inertial_SM_drag_REp'# 'inertial_drag_REp'
     # starting date 
     starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
     release_times = np.array([  datetime(year, month, day, 0, 0, 0, 0) ])#,
@@ -116,13 +117,14 @@ def run_experiment(rep,year,month,day):
     # newton drag length scale
     ld = 0.70 
     #random displacement distance starting position in meters
-    d = 100 # m 
+    d = 300 # m 
     # 
     # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
     land_handling = 'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 
     save_vorticity = False
     save_fluid_velocity = False
+    save_slip_velocity = True
     coriolis = True
 
     # particle release location
@@ -384,6 +386,8 @@ def run_experiment(rep,year,month,day):
             kernels.append(measure_slip_velocity_SM)
         else:
             kernels.append(measure_slip_velocity)
+    if(save_slip_velocity == True):
+        kernels.append(measure_slip_velocity)
     if (particle_type == 'tracer'):
         kernels.append(AdvectionRK4)
     elif (particle_type == 'tracer_random'):
@@ -426,6 +430,13 @@ def run_experiment(rep,year,month,day):
             Variable('uf', dtype=np.float32, to_write=True, initial=0))
         setattr(inertialparticle, 'vf',
             Variable('vf', dtype=np.float32, to_write=True, initial=0))
+        
+    if (save_slip_velocity == True):
+        print('save uslip and vslip')
+        setattr(inertialparticle, 'uslip',
+            Variable('uslip', dtype=np.float32, to_write=True, initial=0))
+        setattr(inertialparticle, 'vslip',
+            Variable('vslip', dtype=np.float32, to_write=True, initial=0))
             
 
     for release_time in release_times:
@@ -510,7 +521,7 @@ def run_experiment(rep,year,month,day):
         pset.execute([deleteParticle], runtime=1, dt=-1, verbose_progress=True)
 
         # run simulation
-        pset.execute(kernels, runtime=runtime, dt=dt_timestep, output_file=pfile)
+        pset.execute(kernels, runtime=runtime, dt=dt_timestep,verbose_progress=False,  output_file=pfile)
         
 
     print('Simulation finished!')
