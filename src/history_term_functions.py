@@ -82,3 +82,5 @@ def History_Force_Hinsberg_Basset_kernel(dudt, t, N, dt,d,nu, rho):
     history = tau_diff / (4 * np.pi) * Hinsberg(dudt,N,h) 
     return 3 * np.pi * d * nu * rho * history
 
+def History_time(tau_diff,Rep):
+    return tau_diff * (0.502/Rep + 0.123)**2
