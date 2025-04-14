@@ -36,8 +36,8 @@ class initGrid:
         """
         self.hexint = np.array([int(a, 16) for a in self.hexagons])
         self.centroids = [h3.cell_to_latlng(hex) for hex in self.hexagons]
-        self.centroid_lats = np.array([c[1] for c in self.centroids])
-        self.centroid_lons = np.array([c[0] for c in self.centroids])
+        self.centroid_lats = np.array([c[0] for c in self.centroids])
+        self.centroid_lons = np.array([c[1] for c in self.centroids])
         
     @property
     def size(self):
