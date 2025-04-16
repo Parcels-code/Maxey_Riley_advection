@@ -10,6 +10,7 @@ TO DO: ADD
 #import packages
 import numpy as np
 import xarray as xr
+import warnings
 
 
 
@@ -120,25 +121,73 @@ def trajectory_length(lon,lat):
 
     
 
-def make_PDF(x,nbins,norm,min=100000,max=-100000 ):
-    # remove nans
-    x =x[~np.isnan(x)]
-    if(min==100000):
-        min=np.nanmin(x)
-    if(max==-100000):
-        max=np.nanmax(x)
+# def make_PDF(x,nbins,norm,min=100000,max=-100000 ):
+#     # remove nans
+#     x =x[~np.isnan(x)]
+#     if(min==100000):
+#         min=np.nanmin(x)
+#     if(max==-100000):
+#         max=np.nanmax(x)
     
-    dx=(max-min)/nbins
-    max+=dx
-    min-=dx
-    indices=((x-min)/dx).astype(int)
-    pdf=np.zeros(nbins+3)
-    np.add.at(pdf,indices,1)
-    bins=np.arange(min,max+0.1*dx,dx)+0.5*dx
+#     dx=(max-min)/nbins
+#     max+=dx
+#     min-=dx
+#     indices=((x-min)/dx).astype(int)
+#     pdf=np.zeros(nbins+3)
+#     np.add.at(pdf,indices,1)
+#     bins=np.arange(min,max+0.1*dx,dx)+0.5*dx
+#     if(norm == True):
+#         pdf/=x.size*dx
+#     return bins, pdf
+
+
+def make_PDF(x : np.array,nbins : int,norm : bool,vmin  = None,vmax = None ):
+    # check typess
+ 
+    # Set min/max only if not provided
+    vmin = np.nanmin(x) if vmin is None else vmin
+    vmax = np.nanmax(x) if vmax is None else vmax
+    
+    if((x > vmax).any()):
+        warnings.warn("Some values in x are greater than vmax, thus not all values are used in the pdf", UserWarning)
+    if((x < vmin).any()):
+        warnings.warn("Some values in x are smaller than vmin, thus not all values are used in the pdf", UserWarning)
+    dx = (vmax - vmin) / nbins
+    pdf, bin_edges = np.histogram(x, bins=nbins, range=(vmin, vmax))
+    bins = bin_edges[:-1]+0.5*dx
     if(norm == True):
-        pdf/=x.size*dx
+        pdf = pdf / x.size
+ 
     return bins, pdf
 
+def make_lognormal_PDF(x: np.array, nbins: int, norm: bool, vmin=None, vmax=None):
+    # Ensure all values are positive (log-space requires x > 0)
+    if ((x <= 0).any()):
+        raise ValueError('x array has value <= O not possible for log distribution')
+    x = x[x > 0]  
+    
+    # Set min/max only if not provided
+    vmin = np.nanmin(x) if vmin is None else vmin
+    vmax = np.nanmax(x) if vmax is None else vmax
+
+    if (x > vmax).any():
+        warnings.warn("Some values in x are greater than vmax, thus not all values are used in the pdf", UserWarning)
+    if (x < vmin).any():
+        warnings.warn("Some values in x are smaller than vmin, thus not all values are used in the pdf", UserWarning)
+
+    # Generate logarithmically spaced bins
+    bin_edges = np.logspace(np.log10(vmin), np.log10(vmax), nbins + 1)
+
+    # Compute histogram
+    pdf, _ = np.histogram(x, bins=bin_edges)
+
+    # Compute bin centers in log-space
+    bins = np.sqrt(bin_edges[:-1] * bin_edges[1:])
+
+    if norm:
+        pdf = pdf / x.size
+
+    return bins, pdf
 
 def mean_angle(angles, units='deg'):
     """
