@@ -190,14 +190,17 @@ def make_PDF(x: np.array, nbins: int, norm: bool, vmin=None, vmax=None):
 
 
 def make_lognormal_PDF(x: np.array, nbins: int, norm: bool, vmin=None, vmax=None):
-    # Ensure all values are positive (log-space requires x > 0)
-    if (x <= 0).any():
-        raise ValueError("x array has value <= O not possible for log distribution")
-    x = x[x > 0]
-
     # Set min/max only if not provided
     vmin = np.nanmin(x) if vmin is None else vmin
     vmax = np.nanmax(x) if vmax is None else vmax
+
+    # Ensure all values are positive (log-space requires x > 0)
+    if (vmin <= 0):
+        raise ValueError("x array has value <= O not possible for log distribution")
+    x = x[x > 0]
+
+    
+  
 
     if (x > vmax).any():
         warnings.warn(
