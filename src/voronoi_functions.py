@@ -46,6 +46,24 @@ def create_sea_mask_polygon(
 
     return seagdf
 
+def create_simulation_domain(lon_min : float, lon_max: float, lat_min : float, lat_max : float) -> gpd.GeoDataFrame:
+    """
+    Create square polygon in GeoDataFrame given min and max lons and lats 
+    """
+    domaingdf = gpd.GeoDataFrame(geometry=[
+        geometry.Polygon(
+            shell=[
+                (lon_max, lat_max),
+                (lon_min, lat_max),
+                (lon_min,lat_min),
+                (lon_max,lat_min),
+                (lon_max, lat_max),
+            ])],
+              crs=WGS84_CRS,
+            )
+
+    return domaingdf
+
 
 def from_dataset_to_points(
     ds: xr.Dataset, T: int, sea_domain: gpd.GeoDataFrame
@@ -55,11 +73,11 @@ def from_dataset_to_points(
     The points coordinates are rounded to 5 decimals as the vonoroi tesselation
     has limited precision (it can can not tell paticles apart with are seperated by only 10^-6 deg)
     """
-    T = 700
+    ds_T = ds.isel(obs = T)
     lon_min, lat_min, lon_max, lat_max = sea_domain.total_bounds
     points = [
         geometry.Point(np.round(lon, 5), np.round(lat, 5))
-        for lon, lat in zip(ds.lon[:, T].values, ds.lat[:, T].values)
+        for lon, lat in zip(ds_T.lon.values, ds_T.lat.values)
         if np.isnan(lon) == False
         and lon > lon_min
         and lon < lon_max
@@ -128,6 +146,7 @@ def plot_voronoi(
     vmin: float = 0,
     vmax: float = 0,
     colormap_scale: str = "log",
+    colorbar_on = True,
 ):
     if color_scale_type not in ["density", "area"]:
         raise ValueError("color_scale_type should be density or area")
@@ -151,5 +170,6 @@ def plot_voronoi(
     voronoi_cells.plot(ax=ax, color=colors_cells, edgecolor=colors_cells)
     sm = cm.ScalarMappable(cmap=colormap, norm=norm)
     sm.set_array(color_list)
-    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", shrink=0.8)
-    cbar.set_label(f"Particle {color_scale_type}")
+    if(colorbar_on == True):
+        cbar = fig.colorbar(sm, ax=ax, orientation="vertical", shrink=0.8)
+        cbar.set_label(f"Particle {color_scale_type}")
