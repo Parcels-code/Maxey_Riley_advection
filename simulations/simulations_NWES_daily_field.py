@@ -24,6 +24,7 @@ from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_S
 from kernels import measure_slip_velocity, measure_slip_velocity_SM
 from kernels import set_displacement
 
+
 @click.command()
 @click.option('--rep',default=0, help ='Particle Reynolds number')
 @click.option('--year',default=2023,help='starting year')
@@ -60,8 +61,8 @@ def run_experiment(pt, rep,year,month,day):
     output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                             'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                             'tres_{time_resolution}_'
-                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_vorticity_{save_vorticity}.zarr')
-
+                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}.zarr')
+    np.random.seed(0)
     ##################################
     #       Simulation settings      #
     ##################################
@@ -77,6 +78,7 @@ def run_experiment(pt, rep,year,month,day):
     if( pt in ('inertial_drag_Rep', 'inertial_SM_drag_Rep')):
         save_slip_velocity = True
     coriolis = True
+    gradient = True
     starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
     release_time = datetime(year, month, day, 0, 0, 0, 0)
     runtime = timedelta(days=30)  
@@ -85,7 +87,7 @@ def run_experiment(pt, rep,year,month,day):
     d = 300 
     dt_write =timedelta(hours=1)
     B = 0.68
-    tau = 2759.97
+    tau = 2994.76 # 2759.97
     def factor_drag(Rep):
         c_Rep = 1 + Rep / (4. * (1 +  np.sqrt(Rep))) + Rep / 60.
         return c_Rep
@@ -108,13 +110,13 @@ def run_experiment(pt, rep,year,month,day):
                     'lon': 'longitude',
                     'time': 'time'}
     indices = {}
-    input_filename = 'cmems_mod_nws_phy_anfc_0.027deg-3D_P1D-m_1743500428567.nc' #'cmems_mod_nws_phy-cur_anfc_detided-0.027deg_P1D-m_1741593127167.nc'
+    input_filename = 'cmems_mod_nws_phy_anfc_0.027deg-daily_field_2023-09-01_2024-03-06.nc'#'cmems_mod_nws_phy_anfc_0.027deg-3D_P1D-m_1743500428567.nc' #'cmems_mod_nws_phy-cur_anfc_detided-0.027deg_P1D-m_1741593127167.nc'
 
     fieldset = FieldSet.from_netcdf(field_directory+input_filename, variables, dimensions, indices=indices,
                                             allow_time_extrapolation="False")
 
     if (land_handling == 'anti_beaching'):    
-        antibeachingfile = land_directory + 'anti_beaching_NWES_new.nc'
+        antibeachingfile = land_directory + 'anti_beaching_NWES_daily.nc'
         filenames_anti_beaching = {'dispU': antibeachingfile,
                                 'dispV': antibeachingfile,
                                 'landmask': antibeachingfile,
@@ -150,7 +152,8 @@ def run_experiment(pt, rep,year,month,day):
 
     fieldset.add_constant('Rearth', 6371 * 10**3)
     fieldset.add_constant('nu',1.3729308666017527*10**(-6))
-
+    fieldset.add_constant('gradient', gradient)
+    fieldset.add_constant('save_slip_velocity',save_slip_velocity)
     # grid spacing
     Delta_x = fieldset.U.grid.lon[1]-fieldset.U.grid.lon[0]
     Delta_y = fieldset.U.grid.lat[1]-fieldset.U.grid.lat[0]
@@ -199,7 +202,7 @@ def run_experiment(pt, rep,year,month,day):
     land_mask_file = land_directory + 'NWS_mask_land_new.nc'
     doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_new.nc' 
     norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_new.nc' 
-    NWES_hex_file = land_directory + 'NWES_hex_release_new_2.nc' 
+    NWES_hex_file = land_directory + 'NWES_daily_hex_release_new.nc' 
 
     if(loc == 'NWES'):
         if(grid == 'square'):
@@ -220,6 +223,10 @@ def run_experiment(pt, rep,year,month,day):
     Blist = np.full(nparticles, B)
     taulist = np.full(nparticles, tau)
 
+    # Move particles randomly from starting position 
+    if (particle_type == 'tracer_random'):
+        theta = np.random.rand(nparticles)*2*np.pi
+        lon_particles, lat_particles = displace_coordinates(lon_particles,lat_particles,d, theta)
 
     # setting kernels
     if (particle_type == 'inertial_initSM'):
@@ -233,8 +240,8 @@ def run_experiment(pt, rep,year,month,day):
             kernels.append(measure_slip_velocity_SM)
         else:
             kernels.append(measure_slip_velocity)
-    if(save_slip_velocity == True):
-        kernels.append(measure_slip_velocity)
+    # if(save_slip_velocity == True):
+    #     kernels.append(measure_slip_velocity)
     if (particle_type == 'tracer'):
         kernels.append(AdvectionRK4)
     elif (particle_type == 'tracer_random'):
