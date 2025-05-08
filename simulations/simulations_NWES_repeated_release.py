@@ -35,8 +35,9 @@ from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_S
 @click.option('--year',default=2023,help='starting year')
 @click.option('--month',default=9,help='starting month')
 @click.option('--day',default=1,help='starting day')
+@click.option('--pt',default='tracer',help='particle type')
 
-def run_experiment(rep,year,month,day):
+def run_experiment(pt, rep,year,month,day):
     # set directories
     Rep  = rep
     field_directory = ('/storage/shared/oceanparcels/input_data/CopernicusMarineService/'
@@ -57,12 +58,12 @@ def run_experiment(rep,year,month,day):
     output_file_b = (output_directory + '{particle_type}/{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                    'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}.zarr')
+                    'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
 
     output_file_Rep_b = (output_directory + '{particle_type}/{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}.zarr')
+                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
 
 
     output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
@@ -79,7 +80,7 @@ def run_experiment(rep,year,month,day):
     ##################################
 
     # options are tracer, tracer_random, inertial (MR) or inertial_SM (MR slow manifold), inertial_initSM (MR velocity initialized using the MR slow manifold eq), # inertial_drag_REp
-    particle_type = 'inertial_SM_Rep_constant'#'tracer_random'# 'tracer'# 'inertial_Rep_constant'#'inertial_drag_Rep'# 'inertial_drag_REp'#'inertial_SM_drag_REp' #'inertial_SM_drag_REp'#'inertial_SM_drag_REp'# 'inertial_drag_REp'
+    particle_type = pt # 'inertial_SM_Rep_constant'#'tracer_random'# 'tracer'# 'inertial_Rep_constant'#'inertial_drag_Rep'# 'inertial_drag_REp'#'inertial_SM_drag_REp' #'inertial_SM_drag_REp'#'inertial_SM_drag_REp'# 'inertial_drag_REp'
     # starting date 
     starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
     release_times = np.array([  datetime(year, month, day, 0, 0, 0, 0) ])#,
@@ -95,7 +96,7 @@ def run_experiment(rep,year,month,day):
                         #   datetime(2024, 4, 1, 0, 0, 0, 0)])
     # settings for temporal releaste
 
-    runtime = timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
+    runtime = timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
     # total_runtime = timedelta(days=10)
     # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
     endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
@@ -106,7 +107,7 @@ def run_experiment(rep,year,month,day):
     # Buoyancy (rho_particle/rho_fluid)
     B = 0.68
     # stokes relaxation time
-    tau = 2759.97
+    tau = 2994.76#  2759.97 # 2994.76
     # Rep = 1000# 100 #457#300 # 1000 # 5000 
     def factor_drag(Rep):
         c_Rep = 1 + Rep / (4. * (1 +  np.sqrt(Rep))) + Rep / 60.
@@ -124,8 +125,14 @@ def run_experiment(rep,year,month,day):
 
     save_vorticity = False
     save_fluid_velocity = False
-    save_slip_velocity = True
+    save_slip_velocity = False
+    if( pt in ('inertial_drag_Rep', 'inertial_SM_drag_Rep')):
+        save_slip_velocity = True
+    
+
     coriolis = True
+    gradient = False
+    
 
     # particle release location
     # option location is North sea, custom, doggersbank, Norwegian trench
@@ -229,6 +236,7 @@ def run_experiment(rep,year,month,day):
         fieldset.add_field(fieldset_anti_beaching.landmask)
         fieldset.add_field(fieldset_anti_beaching.distance2shore)
 
+
     # angular velocity earth in radians/second
     if(coriolis==True):
         fieldset.add_constant('Omega_earth', 7.2921 * (10**-5))
@@ -236,6 +244,8 @@ def run_experiment(rep,year,month,day):
         fieldset.add_constant('Omega_earth', 0)
     else:
         ValueError(f"{coriolis} should be True or False")
+
+
 
     # fieldset.add_constant('Omega_earth', 0)
 
@@ -245,7 +255,11 @@ def run_experiment(rep,year,month,day):
     fieldset.add_constant('Rearth', 6371 * 10**3)
     # kinematic viscosity water
     fieldset.add_constant('nu',1.3729308666017527*10**(-6))
+    # turn on or off gradient calculation
+    fieldset.add_constant('gradient', gradient)
 
+    #save slip veocty
+    fieldset.add_constant('save_slip_velocity',save_slip_velocity)
 
     # grid spacing
     Delta_x = fieldset.U.grid.lon[1]-fieldset.U.grid.lon[0]
@@ -381,13 +395,13 @@ def run_experiment(rep,year,month,day):
         kernels.append(displace)
     if(save_vorticity == True):
         kernels.append(measure_vorticity)
-    if(save_fluid_velocity == True):
-        if(particle_type in ('inertial_SM_Rep_constant', 'inertial_SM_drag_Rep')):
-            kernels.append(measure_slip_velocity_SM)
-        else:
-            kernels.append(measure_slip_velocity)
-    if(save_slip_velocity == True):
-        kernels.append(measure_slip_velocity)
+    # if(save_fluid_velocity == True):
+    #     if(particle_type in ('inertial_SM_Rep_constant', 'inertial_SM_drag_Rep')):
+    #         kernels.append(measure_slip_velocity_SM)
+    #     else:
+    #         kernels.append(measure_slip_velocity)
+    # if(save_slip_velocity == True):
+    #     kernels.append(measure_slip_velocity)
     if (particle_type == 'tracer'):
         kernels.append(AdvectionRK4)
     elif (particle_type == 'tracer_random'):
@@ -485,7 +499,8 @@ def run_experiment(rep,year,month,day):
                                             land_handling=land_handling,
                                             coriolis = coriolis, 
                                             save_vorticity = save_vorticity,
-                                            Rep = Rep)
+                                            Rep = Rep,
+                                            gradient = gradient)
         else:
             output_file = output_file_b.format(particle_type=particle_type,
                                             loc=loc,
@@ -500,7 +515,8 @@ def run_experiment(rep,year,month,day):
                                             land_handling=land_handling,
                                             coriolis = coriolis, 
                                             save_vorticity = save_vorticity,
-                                            Rep = int(Rep))
+                                            Rep = int(Rep),
+                                            gradient = gradient )
 
         pfile = ParticleFile(output_file, pset, outputdt=dt_write,
                             chunks=(nparticles, 100))
