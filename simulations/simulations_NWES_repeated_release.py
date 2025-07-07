@@ -45,7 +45,7 @@ def run_experiment(pt, rep,year,month,day):
     land_directory = ('/storage/shared/oceanparcels/'
                     'output_data/data_Meike/NWES/')
     output_directory = ('/storage/shared/oceanparcels/'
-                        'output_data/data_Meike/MR_advection/NWES/')
+                        'output_data/data_Meike/MR_advection/NWES/test_history_term/')
     # output_file_b = (output_directory + '{particle_type}/{loc}_'
     #                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
     #                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
@@ -96,14 +96,16 @@ def run_experiment(pt, rep,year,month,day):
                         #   datetime(2024, 4, 1, 0, 0, 0, 0)])
     # settings for temporal releaste
 
-    runtime = timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
+    runtime =timedelta(days = 2) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
     # total_runtime = timedelta(days=10)
     # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
     endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
     # integration timestep
-    dt_timestep = timedelta(minutes=5)#timedelta(seconds=30)
+    dt_timestep = timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
+    dt_timestep_initial = timedelta(seconds=1)
+    runtime_initial = timedelta(minutes=5)
     # write timestep
-    dt_write =timedelta(hours=1)# timedelta(hours=1) #  timedelta(minutes=5)#
+    dt_write = timedelta(hours=1)# timedelta(minutes=15)#timedelta(hours=1)# timedelta(hours=1) #  timedelta(minutes=5)#
     # Buoyancy (rho_particle/rho_fluid)
     B = 0.68
     # stokes relaxation time
@@ -121,7 +123,7 @@ def run_experiment(pt, rep,year,month,day):
     d = 300 # m 
     # 
     # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
-    land_handling = 'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
+    land_handling = 'free_slip'#'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 
     save_vorticity = False
     save_fluid_velocity = False
@@ -131,27 +133,27 @@ def run_experiment(pt, rep,year,month,day):
     
 
     coriolis = True
-    gradient = False
+    gradient = True # False
     
 
     # particle release location
     # option location is North sea, custom, doggersbank, Norwegian trench
-    loc = 'NWES' #'NWES' #'north-sea'
+    loc = 'custom'#'NWES' #'NWES' #'north-sea'
     # options for grid (only does something for norwegian trench at the moment)
     # are square for which we use the gridpoint of the velocity field or hexagonal 
-    grid = 'hex' 
+    grid = 'square'#hex' 
     # time_resolution = 'daily' #option are daily or hourly 
 
     # set custom region:
-    startlon_release = -15#-15
-    endlon_release = 9 #8# 9
-    startlat_release = 47# 47
-    endlat_release = 60#60
+    # startlon_release = -2#-15
+    # endlon_release = 9 #8# 9
+    # startlat_release = 50# 47
+    # endlat_release = 58#60
     # Entire North Sea
-    # startlon_release=1
-    # endlon_release=7
-    # startlat_release=51
-    # endlat_release=58
+    startlon_release=1
+    endlon_release=7
+    startlat_release=51
+    endlat_release=58
     indices = {}
 
 
@@ -433,7 +435,7 @@ def run_experiment(pt, rep,year,month,day):
         kernels.append(set_displacement)
 
     kernels.append(remove_at_bounds) 
-
+    kernels_init= kernels_init + kernels
     if (save_vorticity == True):
         setattr(inertialparticle, 'vorticity',
             Variable('vorticity', dtype=np.float32, to_write=True, initial=0))
@@ -445,12 +447,12 @@ def run_experiment(pt, rep,year,month,day):
         setattr(inertialparticle, 'vf',
             Variable('vf', dtype=np.float32, to_write=True, initial=0))
         
-    if (save_slip_velocity == True):
-        print('save uslip and vslip')
-        setattr(inertialparticle, 'uslip',
-            Variable('uslip', dtype=np.float32, to_write=True, initial=0))
-        setattr(inertialparticle, 'vslip',
-            Variable('vslip', dtype=np.float32, to_write=True, initial=0))
+    # if (save_slip_velocity == True):
+        # print('save uslip and vslip')
+    setattr(inertialparticle, 'uslip',
+        Variable('uslip', dtype=np.float32, to_write=save_slip_velocity, initial=0))
+    setattr(inertialparticle, 'vslip',
+        Variable('vslip', dtype=np.float32, to_write=save_slip_velocity, initial=0))
             
 
     for release_time in release_times:
@@ -519,7 +521,7 @@ def run_experiment(pt, rep,year,month,day):
                                             gradient = gradient )
 
         pfile = ParticleFile(output_file, pset, outputdt=dt_write,
-                            chunks=(nparticles, 100))
+                            chunks=(nparticles, 100)) #nparticles
 
         pfile.add_metadata('dt', str(dt_timestep.total_seconds()))
         pfile.add_metadata('delta_x', str(delta_x))  
@@ -532,9 +534,8 @@ def run_experiment(pt, rep,year,month,day):
         pfile.add_metadata('coriolis',coriolis)
 
 
-        pset.execute(kernels_init, runtime=1, dt=1, verbose_progress=True)
-        # I want to reset the time but it does not work
-        pset.execute([deleteParticle], runtime=1, dt=-1, verbose_progress=True)
+        pset.execute(kernels_init, runtime=runtime_initial, dt=dt_timestep_initial, verbose_progress=True,output_file=pfile)
+
 
         # run simulation
         pset.execute(kernels, runtime=runtime, dt=dt_timestep,verbose_progress=False,  output_file=pfile)
