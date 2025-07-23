@@ -183,9 +183,10 @@ def make_PDF(x: np.array, nbins: int, norm: bool, vmin=None, vmax=None):
     dx = (vmax - vmin) / nbins
     pdf, bin_edges = np.histogram(x, bins=nbins, range=(vmin, vmax))
     bins = bin_edges[:-1] + 0.5 * dx
+    bin_widths =bin_edges[1:]-bin_edges[:-1]
     if norm == True:
         pdf = pdf / x.size
-
+    pdf = pdf/bin_widths 
     return bins, pdf
 
 
@@ -221,10 +222,10 @@ def make_lognormal_PDF(x: np.array, nbins: int, norm: bool, vmin=None, vmax=None
 
     # Compute bin centers in log-space
     bins = np.sqrt(bin_edges[:-1] * bin_edges[1:])
-
+    bin_widths =bin_edges[1:]-bin_edges[:-1]
     if norm:
         pdf = pdf / x.size
-
+    pdf = pdf/bin_widths 
     return bins, pdf
 
 
