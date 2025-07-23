@@ -269,7 +269,7 @@ def run_experiment(pt, rep,year,month,day):
         kernels.append(set_displacement)
 
     kernels.append(remove_at_bounds) 
-
+    kernels_init= kernels_init + kernels
 
     if (save_fluid_velocity == True):
         print('save uslip and vslip')
@@ -278,12 +278,13 @@ def run_experiment(pt, rep,year,month,day):
         setattr(inertialparticle, 'vslip',
             Variable('vslip', dtype=np.float32, to_write=True, initial=0))
         
-    if (save_slip_velocity == True):
-        print('save uslip and vslip')
-        setattr(inertialparticle, 'uslip',
-            Variable('uslip', dtype=np.float32, to_write=True, initial=0))
-        setattr(inertialparticle, 'vslip',
-            Variable('vslip', dtype=np.float32, to_write=True, initial=0))
+    # if (save_slip_velocity == True):
+
+    # print('save uslip and vslip')
+    setattr(inertialparticle, 'uslip',
+        Variable('uslip', dtype=np.float32, to_write=save_slip_velocity, initial=0))
+    setattr(inertialparticle, 'vslip',
+        Variable('vslip', dtype=np.float32, to_write=save_slip_velocity, initial=0))
 
     times = (release_time-starttime).total_seconds()
     pset = ParticleSet.from_list(fieldset, inertialparticle, lon=lon_particles,
@@ -363,9 +364,7 @@ def run_experiment(pt, rep,year,month,day):
     pfile.add_metadata('land_handling',land_handling)
     pfile.add_metadata('coriolis',coriolis)
 
-    pset.execute(kernels_init, runtime=1, dt=1, verbose_progress=True)
-    # I want to reset the time but it does not work
-    pset.execute([deleteParticle], runtime=1, dt=-1, verbose_progress=True)
+    pset.execute(kernels_init, runtime=dt_timestep, dt=dt_timestep, verbose_progress=True)
 
     # run simulation
     pset.execute(kernels, runtime=runtime, dt=dt_timestep, output_file=pfile,verbose_progress=False)
