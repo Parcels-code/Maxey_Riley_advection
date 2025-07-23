@@ -76,7 +76,7 @@ def from_dataset_to_points(
     ds_T = ds.isel(obs = T)
     lon_min, lat_min, lon_max, lat_max = sea_domain.total_bounds
     points = [
-        geometry.Point(np.round(lon, 5), np.round(lat, 5))
+        geometry.Point(np.round(lon, 4), np.round(lat, 4))
         for lon, lat in zip(ds_T.lon.values, ds_T.lat.values)
         if np.isnan(lon) == False
         and lon > lon_min
@@ -152,9 +152,11 @@ def plot_voronoi(
         raise ValueError("color_scale_type should be density or area")
 
     # set colormap particles
+    extend_value = 'both'
     if vmax - vmin < 1e-6:
         vmin = voronoi_cells[color_scale_type].min()
         vmax = voronoi_cells[color_scale_type].max()
+        extend_value = 'neither'
 
     if colormap_scale == "log":
         norm = colors.LogNorm(vmin=vmin, vmax=vmax)
@@ -171,5 +173,25 @@ def plot_voronoi(
     sm = cm.ScalarMappable(cmap=colormap, norm=norm)
     sm.set_array(color_list)
     if(colorbar_on == True):
-        cbar = fig.colorbar(sm, ax=ax, orientation="vertical", shrink=0.8)
-        cbar.set_label(f"Particle {color_scale_type}")
+
+        cbar = fig.colorbar(sm, ax=ax, orientation="vertical", shrink=0.8, extend = extend_value)
+        cbar.set_label(f"Particle {color_scale_type} [1/km$^2$]")
+
+
+def make_value_list_per_particle(voronoi_cells: gpd.GeoDataFrame, characteristic : str):
+    """
+    makes array with value for every particle, i.e. it takes duplicates and adds value of duplicates to array
+    this is done the ammount of times the duplicate appears (so if 2 duplicates it added 1 extra time, if duplicate is 2 ect..)
+    characteristic is eighter densisty of area
+    """
+    duplicates=voronoi_cells['duplicates'].values
+
+    max_number = int(np.max(duplicates))
+    values= voronoi_cells[characteristic].values
+    values_per_particle = values
+    for n in range(2,max_number+1):
+        if(values[duplicates==n].size > 0):
+            values_per_particle=np.concatenate((values_per_particle,values[duplicates==n]))
+            for m in range(2,int(n)):
+                values_per_particle=np.concatenate((values_per_particle,values[duplicates==n]))
+    return values
