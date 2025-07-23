@@ -20,6 +20,10 @@ def buoyancy_drifter(
     buoyancy = density_drifter / density_fluid
     return buoyancy
 
+def density_drifter(diameter: float, heigth: float, mass: float) -> float:
+    volume_drifter = 1 / 4 * np.pi * diameter * diameter * heigth
+    density_drifter = mass / volume_drifter
+    return density_drifter
 
 def stokes_relaxation_time(
     diameter: float, kinematic_viscosity: float, buoyancy: float
