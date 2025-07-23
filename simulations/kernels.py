@@ -305,7 +305,9 @@ def InitializeParticles2D(particle, fieldset, time):
     """Kernel for initializing the velocity of the intertial particles in 2D
     to the value of the fluid at the location of the particle.
     """
-    u, v = fieldset.UV[particle]
+    # u, v = fieldset.UV[particle]
+    (u, v) = fieldset.UV[time, particle.depth,
+                             particle.lat, particle.lon]
     particle.up = u
     particle.vp = v
 
@@ -682,8 +684,8 @@ def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
         particle.vslip = vslip
     #calculate Reynolds number
     Rep = math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
-    if(Rep > 15000):
-        Rep = 15000
+    if(Rep > 5000): #maybe this makes it more stable? 
+        Rep = 5000
     #save Reynolds number
     # particle.Rep = Rep
     #calulate correction factor
@@ -943,13 +945,22 @@ def MRAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
 
     # RK4 STEP 1
     # read in velocity at location of particle
+    # slip velocity
     (uf1, vf1) = fieldset.UV[time,
                              particle.depth, particle.lat, particle.lon]
-
-    # velocity particle at current step
+    
     up1 = particle.up
     vp1 = particle.vp
 
+    uslip = (up1 -uf1) * fieldset.Rearth * math.cos(particle.lat * math.pi /180) *  math.pi / 180.
+    vslip = (vp1 -vf1) * fieldset.Rearth * math.pi / 180
+    
+    if(fieldset.save_slip_velocity == True):
+        particle.uslip = uslip
+        particle.vslip = vslip
+    
+   
+    
     
 
     # calculate time derivative of fluid field
@@ -2281,7 +2292,14 @@ def MRSMAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     """
     #VELOCITY DEPENDEND DRAG STOKES TIME
     #get velocity flow and particle in m/s
-
+    (uf1, vf1) = fieldset.UV[time, particle.depth,
+                             particle.lat, particle.lon]
+    
+    uslip = (particle.up - uf1)* fieldset.Rearth * math.cos(particle.lat * math.pi /180) *  math.pi / 180.
+    vslip = (particle.vp - vf1)* fieldset.Rearth * math.pi / 180
+    if(fieldset.save_slip_velocity == True):
+        particle.uslip = uslip
+        particle.vslip = vslip
     
 
 
@@ -2477,8 +2495,8 @@ def MRSMAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     # RK4 INTEGRATION STEP
     particle_dlon += (u1 + 2 * u2 + 2 * u3 + u4) * particle.dt / 6.0
     particle_dlat += (v1 + 2 * v2 + 2 * v3 + v4) * particle.dt / 6.0
-    particle.up = (u1 - uf1) #+ 2 * u2 + 2 * u3 + u4) / 6.0
-    particle.vp =  (v1 - vf1)# 2 * v2 + 2 * v3 + v4) / 6.0
+    particle.up = (u1+ 2 * u2 + 2 * u3 + u4) / 6.0
+    particle.vp =  (v1 + 2 * v2 + 2 * v3 + v4) / 6.0
 
 
 
