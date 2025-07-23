@@ -112,35 +112,46 @@ def f_Mei1992(dudt, t, c1, c2, Rep, N, h, S):
     return f
 
 
-def f_Mei1992_unit(dudt, t, c1, c2, Rep, N, h):
+def f_Mei1992_unit(dudt, t, c1, c2, Rep, N, h,tau_diff):
     # version where kernel is unitless and only slip velocity hase units, time intergral is in terms of t' =  4 pi t  /tau_diff
-    f_h = 0.75 + c2 * Rep
-    f = [
-        dudt[k]
-        * (
-            1
-            + ((t - h * k) ** (3 / 2) * Rep**3 / (16 * np.pi * (f_h) ** 3)) ** (1 / c1)
-        )
-        ** (-c1)
-        for k in range(0, N + 1, 1)
-    ]
+
+    if(np.size(Rep)==1):
+        f = [
+            dudt[k]
+            * (
+                1
+                + ((( (t - h * k)**3 * 12 * np.pi)/(tau_diff * t**3) ) ** (1 / 2) * Rep**3 / (16 * np.pi * (0.75 + c2 * Rep) ** 3)) ** (1 / c1)
+            )
+            ** (-c1)
+            for k in range(0, N + 1, 1)
+        ]
+    else: 
+         f = [
+            dudt[k]
+            * (
+                1
+                + ((( (t - h * k)**3 * 12 * np.pi)/(tau_diff * t**3) ) ** (1 / 2) * Rep[k]**3 / (16 * np.pi * (0.75 + c2 * Rep[k]) ** 3)) ** (1 / c1)
+            )
+            ** (-c1)
+            for k in range(0, N + 1, 1)
+         ]
     return f
 
 
-def History_Force_Hinsberg_Mei_kernel(dudt, t, c1, c2, Rep, N, dt, d, nu, rho):
+def History_Force_Hinsberg_Mei_kernel(dudt, t, c1, c2, Rep, N, dt, d, nu):
     tau_diff = d * d / nu  # diffusion timescale
-    h = dt * 4 * np.pi / tau_diff
-    tprime = t * 4 * np.pi / tau_diff
-    f = f_Mei1992_unit(dudt, tprime, c1, c2, Rep, N, h)
-    history = tau_diff / (4 * np.pi) * Hinsberg(f, N, h)
-    return 3 * np.pi * d * nu * rho * history
+    h = dt #* 4 * np.pi / tau_diff
+    tprime = t #* 4 * np.pi / tau_diff
+    f = f_Mei1992_unit(dudt, tprime, c1, c2, Rep, N, h,tau_diff)
+    history = np.sqrt(tau_diff / (4 * np.pi)) * Hinsberg(f, N, h)
+    return history
 
 
-def History_Force_Hinsberg_Basset_kernel(dudt, t, N, dt, d, nu, rho):
+def History_Force_Hinsberg_Basset_kernel(dudt, t, N, dt, d, nu):
     tau_diff = d * d / nu  # diffusion timescale
-    h = dt * 4 * np.pi / tau_diff
-    history = tau_diff / (4 * np.pi) * Hinsberg(dudt, N, h)
-    return 3 * np.pi * d * nu * rho * history
+    h = dt #* 4 * np.pi / tau_diff
+    history = np.sqrt(tau_diff / (4 * np.pi)) * Hinsberg(dudt, N, h)
+    return history
 
 
 def History_time(tau_diff, Rep):
