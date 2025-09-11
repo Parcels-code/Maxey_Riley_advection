@@ -731,6 +731,7 @@ def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     DuDt1 =   ( dudt1 + uf1 * dudx1 + vf1 * dudy1 )
     DvDt1 =   ( dvdt1 + uf1 * dvdx1 + vf1 * dvdy1 )
 
+    
     # coriolis force
     f1 = 2 * fieldset.Omega_earth * math.sin(particle.lat * math.pi / 180)
     ucor1 = -(vf1 - vp1) * f1
@@ -738,13 +739,18 @@ def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     upcor1 = -vp1 * f1
     vpcor1 = up1 * f1
 
+    #lift force    
+    omega1 = dvdx1 - dudy1
+    ulift1 = -(vf1 - vp1) * omega1
+    vlift1 = (uf1 - up1) * omega1
+
     # drag force
     udrag1 = tau_inv * (uf1 - up1)
     vdrag1 = tau_inv * (vf1 - vp1)
 
     # acceleration
-    a_lon1 = Bterm * (DuDt1 + ucor1) + Bterm2 * upcor1 + udrag1
-    a_lat1 = Bterm * (DvDt1 + vcor1) + Bterm2 * vpcor1 + vdrag1
+    a_lon1 = Bterm * (DuDt1 + ucor1 + ulift1) + Bterm2 * upcor1 + udrag1
+    a_lat1 = Bterm * (DvDt1 + vcor1 + vlift1) + Bterm2 * vpcor1 + vdrag1
 
     # lon, lat for next step
     lon1 = particle.lon + 0.5 * up1 * particle.dt
@@ -791,13 +797,18 @@ def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     upcor2 = -vp2 * f2
     vpcor2 = up2 * f2
 
+    #lift force    
+    omega2 = dvdx2 - dudy2
+    ulift2 = -(vf2 - vp2) * omega2
+    vlift2 = (uf2 - up2) * omega2
+
     # drag force
     udrag2 = tau_inv * (uf2 - up2)
     vdrag2 = tau_inv * (vf2 - vp2)
 
     # acceleration
-    a_lon2 = Bterm * (DuDt2 + ucor2) + Bterm2 * upcor2 + udrag2
-    a_lat2 = Bterm * (DvDt2 + vcor2) + Bterm2 * vpcor2 + vdrag2
+    a_lon2 = Bterm * (DuDt2 + ucor2 + ulift2) + Bterm2 * upcor2 + udrag2
+    a_lat2 = Bterm * (DvDt2 + vcor2 + vlift2) + Bterm2 * vpcor2 + vdrag2
 
     # lon, lat for next step
     lon2 = particle.lon + 0.5 * up2 * particle.dt
@@ -845,13 +856,18 @@ def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     upcor3 = -vp3 * f3
     vpcor3 = up3 * f3
 
+    #lift force    
+    omega3 = dvdx3 - dudy3
+    ulift3 = -(vf3 - vp3) * omega3
+    vlift3 = (uf3 - up3) * omega3
+
     # drag force
     udrag3 = tau_inv * (uf3 - up3)
     vdrag3 = tau_inv * (vf3 - vp3)
 
     # acceleration
-    a_lon3 = Bterm * (DuDt3 + ucor3) + Bterm2 * upcor3 + udrag3
-    a_lat3 = Bterm * (DvDt3 + vcor3) + Bterm2 * vpcor3 + vdrag3
+    a_lon3 = Bterm * (DuDt3 + ucor3 + ulift3) + Bterm2 * upcor3 + udrag3
+    a_lat3 = Bterm * (DvDt3 + vcor3 + vlift3) + Bterm2 * vpcor3 + vdrag3
 
     # lon, lat for next step
     lon3 = particle.lon + up3 * particle.dt
@@ -898,13 +914,18 @@ def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     upcor4 = -vp4 * f4
     vpcor4 = up4 * f4
 
+    #lift force    
+    omega4 = dvdx4 - dudy4
+    ulift4 = -(vf4 - vp4) * omega4
+    vlift4 = (uf4 - up4) * omega4
+
     # drag force
     udrag4 = tau_inv * (uf4-up4)
     vdrag4 = tau_inv * (vf4-vp4)
 
     # acceleration
-    a_lon4 = Bterm * (DuDt4 + ucor4) + Bterm2 * upcor4 + udrag4
-    a_lat4 = Bterm * (DvDt4 + vcor4) + Bterm2 * vpcor4 + vdrag4
+    a_lon4 = Bterm * (DuDt4 + ucor4 + ulift4) + Bterm2 * upcor4 + udrag4
+    a_lat4 = Bterm * (DvDt4 + vcor4 + vlift4) + Bterm2 * vpcor4 + vdrag4
 
     # RK4 INTEGRATION STEP
     particle.up += (a_lon1 + 2 * a_lon2
@@ -990,7 +1011,7 @@ def MRAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     DvDt1 = dvdt1 + uf1 * dvdx1 + vf1 * dvdy1
 
     #slip velocity
-    uslip1 =uf1 - up1
+    uslip1 = uf1 - up1
     vslip1 = vf1 - vp1
 
     # coriolis force
@@ -1000,13 +1021,18 @@ def MRAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     upcor1 = -vp1 * f1
     vpcor1 = up1 * f1
 
+    #lift force
+    omega1 = dvdx1 - dudy1
+    ulift1 = -vslip1 * omega1
+    vlift1 = uslip1 * omega1
+
     # drag force
     udrag1 = tau_inv * uslip1
     vdrag1 = tau_inv * vslip1
 
     # acceleration
-    a_lon1 = Bterm * (DuDt1 + ucor1) + Bterm2 * upcor1 + udrag1
-    a_lat1 = Bterm * (DvDt1 + vcor1) + Bterm2 * vpcor1 + vdrag1
+    a_lon1 = Bterm * (DuDt1 + ucor1 + ulift1) + Bterm2 * upcor1 + udrag1
+    a_lat1 = Bterm * (DvDt1 + vcor1 + vlift1) + Bterm2 * vpcor1 + vdrag1
 
     # lon, lat for next step
     lon1 = particle.lon + 0.5 * up1 * particle.dt
@@ -1056,13 +1082,18 @@ def MRAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     upcor2 = -vp2 * f2
     vpcor2 = up2 * f2
 
+    #lift force
+    omega2 = dvdx2 - dudy2
+    ulift2 = -vslip2 * omega2
+    vlift2 = uslip2 * omega2
+
     # drag force
     udrag2 = tau_inv * uslip2
     vdrag2 = tau_inv * vslip2
 
     # acceleration
-    a_lon2 = Bterm * (DuDt2 + ucor2) + Bterm2 * upcor2 + udrag2
-    a_lat2 = Bterm * (DvDt2 + vcor2) + Bterm2 * vpcor2 + vdrag2
+    a_lon2 = Bterm * (DuDt2 + ucor2 + ulift2) + Bterm2 * upcor2 + udrag2
+    a_lat2 = Bterm * (DvDt2 + vcor2 + vlift2) + Bterm2 * vpcor2 + vdrag2
 
     # lon, lat for next step
     lon2 = particle.lon + 0.5 * up2 * particle.dt
@@ -1114,13 +1145,18 @@ def MRAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     upcor3 = -vp3 * f3
     vpcor3 = up3 * f3
 
+    #lift force
+    omega3 = dvdx3 - dudy3
+    ulift3 = -vslip3 * omega3
+    vlift3 = uslip3 * omega3
+
     # drag force
     udrag3 = tau_inv * (uslip3)
     vdrag3 = tau_inv * (vslip3)
 
     # acceleration
-    a_lon3 = Bterm * (DuDt3 + ucor3) + Bterm2 * upcor3 + udrag3
-    a_lat3 = Bterm * (DvDt3 + vcor3) + Bterm2 * vpcor3 + vdrag3
+    a_lon3 = Bterm * (DuDt3 + ucor3 + ulift3) + Bterm2 * upcor3 + udrag3
+    a_lat3 = Bterm * (DvDt3 + vcor3 + vlift3) + Bterm2 * vpcor3 + vdrag3
 
     # lon, lat for next step
     lon3 = particle.lon + up3 * particle.dt
@@ -1171,13 +1207,18 @@ def MRAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     upcor4 = -vp4 * f4
     vpcor4 = up4 * f4
 
+    #lift force
+    omega4 = dvdx4 - dudy4
+    ulift4 = -vslip4 * omega4
+    vlift4 = uslip4 * omega4
+
     # drag force
     udrag4 = tau_inv * (uslip4)
     vdrag4 = tau_inv * (vslip4)
 
     # acceleration
-    a_lon4 = Bterm * (DuDt4 + ucor4) + Bterm2 * upcor4 + udrag4
-    a_lat4 = Bterm * (DvDt4 + vcor4) + Bterm2 * vpcor4 + vdrag4
+    a_lon4 = Bterm * (DuDt4 + ucor4 + ulift4) + Bterm2 * upcor4 + udrag4
+    a_lat4 = Bterm * (DvDt4 + vcor4 + vlift4) + Bterm2 * vpcor4 + vdrag4
 
     # RK4 INTEGRATION STEP
     particle.up += (a_lon1 + 2 * a_lon2
@@ -1261,6 +1302,11 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     upcor1 = -vp1 * f1
     vpcor1 = up1 * f1
 
+    #lift force
+    omega1 = dvdx1 - dudy1
+    ulift1 =  -(vf1 - vp1) * omega1
+    vlift1 = (uf1 - up1) * omega1
+
   
     # Newtonian drag force
     uslip_mag1 = math.sqrt((uf1 - up1)**2 + (vf1 - vp1)**2)
@@ -1268,8 +1314,8 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     vdrag1 = ld_degrees_inv * uslip_mag1 * (vf1 - vp1)
 
     # acceleration
-    a_lon1 = Bterm * (DuDt1 + ucor1) + Bterm2 * upcor1 + udrag1
-    a_lat1 = Bterm * (DvDt1 + vcor1) + Bterm2 * vpcor1 + vdrag1
+    a_lon1 = Bterm * (DuDt1 + ucor1 + ulift1) + Bterm2 * upcor1 + udrag1
+    a_lat1 = Bterm * (DvDt1 + vcor1 + vlift1) + Bterm2 * vpcor1 + vdrag1
 
     # lon, lat for next step
     lon1 = particle.lon + 0.5 * up1 * particle.dt
@@ -1316,14 +1362,19 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     upcor2 = -vp2 * f2
     vpcor2 = up2 * f2
 
+    #lift force
+    omega2 = dvdx2 - dudy2
+    ulift2 =  -(vf2 - vp2) * omega2
+    vlift2 = (uf2 - up2) * omega2
+
     # Newtonian drag force
     uslip_mag2 = math.sqrt((uf2 - up2)**2 + (vf2 - vp2)**2)
     udrag2 = ld_degrees_inv * math.cos(lat1 * math.pi / 180) * uslip_mag2 * (uf2 - up2)
     vdrag2 = ld_degrees_inv * uslip_mag2 * (vf2 - vp2)
 
     # acceleration
-    a_lon2 = Bterm * (DuDt2 + ucor2) + Bterm2 * upcor2 + udrag2
-    a_lat2 = Bterm * (DvDt2 + vcor2) + Bterm2 * vpcor2 + vdrag2
+    a_lon2 = Bterm * (DuDt2 + ucor2 + ulift2) + Bterm2 * upcor2 + udrag2
+    a_lat2 = Bterm * (DvDt2 + vcor2 + vlift2) + Bterm2 * vpcor2 + vdrag2
 
     # lon, lat for next step
     lon2 = particle.lon + 0.5 * up2 * particle.dt
@@ -1371,14 +1422,19 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     upcor3 = -vp3 * f3
     vpcor3 = up3 * f3
 
+    #lift force
+    omega3 = dvdx3 - dudy3
+    ulift3 =  -(vf3 - vp3) * omega3
+    vlift3 = (uf3 - up3) * omega3
+
     # Newtonian drag force
     uslip_mag3 = math.sqrt((uf3 - up3)**2 + (vf3 - vp3)**2)
     udrag3 = ld_degrees_inv * math.cos(lat2 * math.pi / 180) * uslip_mag3 * (uf3 - up3)
     vdrag3 = ld_degrees_inv * uslip_mag3 * (vf3 - vp3)
 
     # acceleration
-    a_lon3 = Bterm * (DuDt3 + ucor3) + Bterm2 * upcor3 + udrag3
-    a_lat3 = Bterm * (DvDt3 + vcor3) + Bterm2 * vpcor3 + vdrag3
+    a_lon3 = Bterm * (DuDt3 + ucor3 + ulift3) + Bterm2 * upcor3 + udrag3
+    a_lat3 = Bterm * (DvDt3 + vcor3 + vlift3) + Bterm2 * vpcor3 + vdrag3
 
     # lon, lat for next step
     lon3 = particle.lon + up3 * particle.dt
@@ -1425,14 +1481,19 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     upcor4 = -vp4 * f4
     vpcor4 = up4 * f4
 
+    #lift force
+    omega4 = dvdx4 - dudy4
+    ulift4 =  -(vf4 - vp4) * omega4
+    vlift4 = (uf4 - up4) * omega4
+
     # Newtonian drag force
     uslip_mag4 = math.sqrt((uf4 - up4)**2 + (vf4 - vp4)**2)
     udrag4 = ld_degrees_inv * math.cos(lat3 * math.pi / 180)  * uslip_mag4 * (uf4 - up4)
     vdrag4 = ld_degrees_inv * uslip_mag4 * (vf4 - vp4)
 
     # acceleration
-    a_lon4 = Bterm * (DuDt4 + ucor4) + Bterm2 * upcor4 + udrag4
-    a_lat4 = Bterm * (DvDt4 + vcor4) + Bterm2 * vpcor4 + vdrag4
+    a_lon4 = Bterm * (DuDt4 + ucor4 + ulift4) + Bterm2 * upcor4 + udrag4
+    a_lat4 = Bterm * (DvDt4 + vcor4 + vlift4) + Bterm2 * vpcor4 + vdrag4
 
     # RK4 INTEGRATION STEP
     particle.up += (a_lon1 + 2 * a_lon2
@@ -1515,14 +1576,19 @@ def MRAdvectionEC_3D(particle, fieldset, time):
     upcor = - particle.vp * f
     vpcor = particle.up * f
 
+    #lift force
+    omega = dvdx - dudy
+    ulift =  -(vf - particle.vp) * omega
+    vlift = (uf - particle.up)  * omega
+
     # drag force
     udrag = tau_inv * (uf - particle.up)
     vdrag = tau_inv * (vf - particle.vp)
     wdrag = tau_inv * (wf - particle.wp)
 
     # advection using the Euler-Cromer algorithm:
-    a_lon = Bterm * (DuDt + ucor) - Bterm2 * upcor + udrag
-    a_lat = Bterm * (DvDt + vcor) - Bterm2 * vpcor + vdrag
+    a_lon = Bterm * (DuDt + ucor + ulift) - Bterm2 * upcor + udrag
+    a_lat = Bterm * (DvDt + vcor + vlift) - Bterm2 * vpcor + vdrag
     a_depth = Bterm * (DwDt) + wdrag + w0overtau
 
     particle.up = particle.up + a_lon * particle.dt
@@ -1624,14 +1690,19 @@ def MRAdvectionRK4_3D(particle, fieldset, time):
     upcor1 = -vp1 * f1
     vpcor1 = up1 * f1
 
+    #lift force
+    omega1 = dvdx1 - dudy1
+    ulift1 =  -(vf1 - vp1) * omega1
+    vlift1 = (uf1 - up1)  * omega1
+
     # drag force
     udrag1 = tau_inv * (uf1 - up1)
     vdrag1 = tau_inv * (vf1 - vp1)
     wdrag1 = tau_inv * (w0 + wf1 - wp1)
 
     # acceleration particle for current step
-    a_lon1 = Bterm * (DuDt1 + ucor1) + Bterm2 * upcor1 + udrag1
-    a_lat1 = Bterm * (DvDt1 + vcor1) + Bterm2 * vpcor1 + vdrag1
+    a_lon1 = Bterm * (DuDt1 + ucor1 + ulift1) + Bterm2 * upcor1 + udrag1
+    a_lat1 = Bterm * (DvDt1 + vcor1 + vlift1) + Bterm2 * vpcor1 + vdrag1
     a_depth1 = Bterm * DwDt1 + wdrag1
 
     # lon, lat, depth for next step
@@ -1692,14 +1763,19 @@ def MRAdvectionRK4_3D(particle, fieldset, time):
     upcor2 = -vp2 * f2
     vpcor2 = up2 * f2
 
+    #lift force
+    omega2 = dvdx2 - dudy2
+    ulift2 =  -(vf2 - vp2) * omega2
+    vlift2 = (uf2 - up2)  * omega2
+
     # drag force
     udrag2 = tau_inv * (uf2 - up2)
     vdrag2 = tau_inv * (vf2 - vp2)
     wdrag2 = tau_inv * (w0 + wf2 - wp2)
 
     # acceleration particle for current step
-    a_lon2 = Bterm * (DuDt2 + ucor2) + Bterm2 * upcor2 + udrag2
-    a_lat2 = Bterm * (DvDt2 + vcor2) + Bterm2 * vpcor2 + vdrag2
+    a_lon2 = Bterm * (DuDt2 + ucor2 + ulift2) + Bterm2 * upcor2 + udrag2
+    a_lat2 = Bterm * (DvDt2 + vcor2 + vlift2) + Bterm2 * vpcor2 + vdrag2
     a_depth2 = Bterm * DwDt2+wdrag2
 
     # calculate RK4 coefficients
@@ -1759,14 +1835,19 @@ def MRAdvectionRK4_3D(particle, fieldset, time):
     upcor3 = -vp3 * f3
     vpcor3 = up3 * f3
 
+    #lift force
+    omega3 = dvdx3 - dudy3
+    ulift3 =  -(vf3 - vp3) * omega3
+    vlift3 = (uf3 - up3)  * omega3
+
     # drag force
     udrag3 = tau_inv * (uf3 - up3)
     vdrag3 = tau_inv * (vf3 - vp3)
     wdrag3 = tau_inv * (w0 + wf3 - wp3)
 
     # acceleration particle for current step
-    a_lon3 = Bterm * (DuDt3 + ucor3) + Bterm2 * upcor3 + udrag3
-    a_lat3 = Bterm * (DvDt3 + vcor3) + Bterm2 * vpcor3 + vdrag3
+    a_lon3 = Bterm * (DuDt3 + ucor3 + ulift3) + Bterm2 * upcor3 + udrag3
+    a_lat3 = Bterm * (DvDt3 + vcor3 + vlift3) + Bterm2 * vpcor3 + vdrag3
     a_depth3 = Bterm * DwDt3 + wdrag3
 
     # calculate RK4 coefficients
@@ -1826,14 +1907,19 @@ def MRAdvectionRK4_3D(particle, fieldset, time):
     upcor4 = -vp4 * f4
     vpcor4 = up4 * f4
 
+    #lift force
+    omega4 = dvdx4 - dudy4
+    ulift4 =  -(vf4 - vp4) * omega4
+    vlift4 = (uf4 - up4)  * omega4
+
     # drag force
     udrag4 = tau_inv * (uf4 - up4)
     vdrag4 = tau_inv * (vf4 - vp4)
     wdrag4 = tau_inv * (w0 + wf4 - wp4)
 
     # acceleration particle for current step
-    a_lon4 = Bterm * (DuDt4 + ucor4) + Bterm2 * upcor4 + udrag4
-    a_lat4 = Bterm * (DvDt4 + vcor4) + Bterm2 * vpcor4 + vdrag4
+    a_lon4 = Bterm * (DuDt4 + ucor4 + ulift4) + Bterm2 * upcor4 + udrag4
+    a_lat4 = Bterm * (DvDt4 + vcor4 + vlift4) + Bterm2 * vpcor4 + vdrag4
     a_depth4 = Bterm * DwDt4 + wdrag4
 
     # RK4 INTERGRATION STEP
@@ -2075,6 +2161,8 @@ def MRSMAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
         particle.vslip = vslip
     #calculate Reynolds number
     Rep = math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
+    if(Rep > 5000):
+        Rep = 5000
     #calulate correction factor
     f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
   
