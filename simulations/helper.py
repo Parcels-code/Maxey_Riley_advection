@@ -4,7 +4,15 @@ import math
 from datetime import datetime, timedelta
 import xarray as xr
 
-def create_filelist(input_directory, str ,time_start,time_end,dt, dt_name):
+def create_filelist(input_directory : str, str : str ,time_start : datetime ,time_end : datetime,dt : timedelta, dt_name: timedelta) -> list:
+    """
+    Function that creates list of all input files between time_start and time_end for NWSHELF_ANALYSISFORECAST_PHY_004_013 hourly dataset from
+    copernicus marine service (https://doi.org/10.48670/moi-00054). 
+    - input_directory is a string of the directory where the files are stored
+    - str is the basename of the files (with _t is current time and _tp is plus the interval given by dt_name)
+    - dt is timestepping of files
+    - dt_name is timestepping used in name of file
+    """
     time = time_start
     files = []
     while (time<=time_end):
@@ -20,7 +28,7 @@ def create_filelist(input_directory, str ,time_start,time_end,dt, dt_name):
         
     return files
 
-def displace_coordinates(lon, lat, d, B):
+def displace_coordinates(lon : np.array , lat: np.array , d : float, B: float) -> tuple[np.array, np.array]:
     """
     Function that displaces point(s) given by lon, lat over a distance d
     (in meters) in direction B (angle measured clockwise in radians from the
@@ -36,26 +44,24 @@ def displace_coordinates(lon, lat, d, B):
     lon_new_angle = lon_new * 180/np.pi 
     return lon_new_angle, lat_new_angle
 
-def getclosest_ij(lats, lons, latpt, lonpt):
+def getclosest_ij(lats : np.array , lons : np.array , latpt: np.array, lonpt: np.array) -> np.array:
     """Function to find the index of the closest point to a certain lon/lat value."""
-    dist_sq = (lats - latpt) ** 2 + (lons - lonpt) ** 2  # find squared distance of every point on grid
-    minindex_flattened = np.nanargmin(dist_sq)  # 1D index of minimum dist_sq element
+    dist_sq = (lats - latpt) ** 2 + (lons - lonpt) 
+    minindex_flattened = np.nanargmin(dist_sq)  
     return np.unravel_index(minindex_flattened,
-                            lats.shape)  # Get 2D index for latvals and lonvals arrays from 1D index
+                            lats.shape)  
 
 
-
-def set_particles_region(land_mask_file,lonmin,lonmax,latmin,latmax):
+def set_particles_region(land_mask_file : str,lonmin: float,lonmax: float,latmin: float,latmax: float,name_lon : str = 'lon' , name_lat : str = 'lat')-> tuple[np.array,np.array]:
     """
     Function that creates lon and lat list of 1 particle per gridcell release taking into account 
     the region selection as given by longitudes between lonmin and lonmax and latitudes between
     latmin and latmax and removing all particles that are placed on land (using a seperately  created 
     landmask file)
-    TO DO: make it possible to release multiple plarticles per cell (think/ask about distribution?)
     """
     data_mask=xr.open_dataset(land_mask_file)
-    lon=data_mask['lon'].data
-    lat=data_mask['lat'].data
+    lon=data_mask[name_lon].data
+    lat=data_mask[name_lat].data
 
 
     iy_min, ix_min = getclosest_ij(lat, lon, latmin, lonmin)
