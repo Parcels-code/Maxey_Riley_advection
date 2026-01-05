@@ -87,7 +87,7 @@ def run_experiment(pt, rep,year,month,day):
     d = 300 
     dt_write =timedelta(hours=1)
     B = 0.68
-    tau = 2994.76 # 2759.97
+    tau = 3196.29  # 2994.76 # 2759.97
     def factor_drag(Rep):
         c_Rep = 1 + Rep / (4. * (1 +  np.sqrt(Rep))) + Rep / 60.
         return c_Rep

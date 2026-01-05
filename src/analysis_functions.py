@@ -10,6 +10,7 @@ TO DO: ADD
 
 # import packages
 import numpy as np
+import numpy.linalg as LA
 import xarray as xr
 import warnings
 
@@ -255,3 +256,66 @@ def mean_angle(angles, units="deg"):
 def running_mean(x, N):
     cumsum = np.cumsum(np.insert(x, 0, 0))
     return (cumsum[N:] - cumsum[:-N]) / float(N)
+
+
+# FTLE
+def ftle_brunton_2009(J, Td):
+    # http://cwrowley.princeton.edu/papers/BruntonChaos09.pdf
+    D = np.dot(np.transpose(J), J)  # Cauchy–Green strain tensor
+    lamda = LA.eigvals(D)
+    lam_max = max(lamda)
+    lam_min = min(lamda)
+    ftle_max = (1/Td)*np.log(np.sqrt(lam_max))
+    ftle_min = (1/Td)*np.log(np.sqrt(lam_min))
+    return ftle_max, ftle_min
+
+
+def compute_ftle_hex(lon0, lat0, lon1, lat1, neighbor_list, Td):
+    """Compute Finite-time Lyaponov Exponent function from locations of Lagrangian trajectories at the intial and a later timestep
+
+    Parameters
+    ----------
+    lon0: 1D array of initial longitude points
+    lat0: 1D array of initial latitude points 
+    lon1: 1D array of final longitude points
+    lat1: 1D array of final latitude points 
+    neighbor_list: 2D array (obs, #neighbors = 6) of neighboring particles for each point in array 
+    Td : number of days between inital and final timestamps 
+
+    Returns
+    -------
+    1D array
+    Computed FTLE for the whole set of points
+    """
+
+    nparticles = lon0.size
+    FTLE_f_max = np.full((nparticles),np.nan)
+    FTLE_f_min = np.full((nparticles),np.nan)
+
+    J = np.empty([2, 3], float)
+
+    for i in range(nparticles):
+        n = neighbor_list[i]
+        if(np.isnan(lon1[i])):
+            continue
+        if((n<0).any()):
+            continue
+        if(np.isnan(lon1[n]).any()):
+            continue
+        J[0][0] = Haversine(lon1[i],lat1[i],lon1[n[3]],lat1[n[3]]) / Haversine(lon0[i],lat0[i],lon0[n[3]],lat0[n[3]])       
+        J[0][1] = Haversine(lon1[i],lat1[i],lon1[n[4]],lat1[n[4]]) / Haversine(lon0[i],lat0[i],lon0[n[4]],lat0[n[4]])       
+        J[0][2] = Haversine(lon1[i],lat1[i],lon1[n[5]],lat1[n[5]]) / Haversine(lon0[i],lat0[i],lon0[n[3]],lat0[n[5]])       
+        J[1][0] = Haversine(lon1[i],lat1[i],lon1[n[2]],lat1[n[2]]) / Haversine(lon0[i],lat0[i],lon0[n[2]],lat0[n[2]])       
+        J[1][1] = Haversine(lon1[i],lat1[i],lon1[n[1]],lat1[n[1]]) / Haversine(lon0[i],lat0[i],lon0[n[1]],lat0[n[1]])       
+        J[1][2] = Haversine(lon1[i],lat1[i],lon1[n[0]],lat1[n[0]]) / Haversine(lon0[i],lat0[i],lon0[n[0]],lat0[n[0]])
+        if(np.isnan(J).any()):
+            print(f'nan found at particle {i}')
+            print(J)
+
+        ftle_max, ftle_min =  ftle_brunton_2009(J, Td)    
+
+        FTLE_f_max[i] = ftle_max
+        FTLE_f_min[i] = ftle_min
+
+    # 1, H-1 --> to ignore bordersx for now
+    return FTLE_f_max, FTLE_f_min 

@@ -593,7 +593,7 @@ def run_experiment(pt, rep,year,month,day,d):
 
 
         # run simulation
-        pset.execute(kernels, runtime=runtime, dt=dt_timestep,verbose_progress=True,  output_file=pfile)
+        pset.execute(kernels, runtime=runtime, dt=dt_timestep,verbose_progress=False,  output_file=pfile)
         
 
     print('Simulation finished!')

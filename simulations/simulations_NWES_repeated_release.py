@@ -25,9 +25,9 @@ from datetime import datetime, timedelta
 from helper import create_filelist, set_particles_region, displace_coordinates
 from kernels import InertialParticle2D, InertialParticle3D, deleteParticle
 from kernels import InitializeParticles2D, InitializeParticles2D_MRSM, InitializeParticles3D
-from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D, MRAdvectionRK4_2D_Newtonian_drag, MRAdvectionRK4_2D_drag_Rep, MRSMAdvectionRK4_2D_drag_Rep
-from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_3D, MRSMAdvectionRK4_2D_drag_Rep_constant, MRAdvectionRK4_2D_drag_Rep_constant
-from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity
+from kernels import   MRAdvectionRK4_2D_drag_Rep, MRSMAdvectionRK4_2D_drag_Rep
+from kernels import MRSMAdvectionRK4_2D_drag_Rep_constant, MRAdvectionRK4_2D_drag_Rep_constant
+from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity, measure_coriolis_force, measure_gradient_force, measure_vorticity_force
 from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_SM
 
 @click.command()
@@ -36,8 +36,9 @@ from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_S
 @click.option('--month',default=9,help='starting month')
 @click.option('--day',default=1,help='starting day')
 @click.option('--pt',default='tracer',help='particle type')
+@click.option('--d',default=300,help='initial displacment in m')
 
-def run_experiment(pt, rep,year,month,day):
+def run_experiment(pt, rep,year,month,day,d):
     # set directories
     Rep  = rep
     field_directory = ('/storage/shared/oceanparcels/input_data/CopernicusMarineService/'
@@ -45,7 +46,7 @@ def run_experiment(pt, rep,year,month,day):
     land_directory = ('/storage/shared/oceanparcels/'
                     'output_data/data_Meike/NWES/')
     output_directory = ('/storage/shared/oceanparcels/'
-                        'output_data/data_Meike/MR_advection/NWES/test_history_term/')
+                        'output_data/data_Meike/MR_advection/NWES/')
     # output_file_b = (output_directory + '{particle_type}/{loc}_'
     #                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
     #                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
@@ -55,12 +56,12 @@ def run_experiment(pt, rep,year,month,day):
     #                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
     #                  'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_Rep_{Rep:04d}_slip_velocity.zarr')
 
-    output_file_b = (output_directory + '{particle_type}/{loc}_'
+    output_file_b = (output_directory + '{particle_type}/test_{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
                     'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
 
-    output_file_Rep_b = (output_directory + '{particle_type}/{loc}_'
+    output_file_Rep_b = (output_directory + '{particle_type}/test_{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
                     '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
@@ -96,12 +97,12 @@ def run_experiment(pt, rep,year,month,day):
                         #   datetime(2024, 4, 1, 0, 0, 0, 0)])
     # settings for temporal releaste
 
-    runtime =timedelta(days = 2) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
+    runtime = timedelta(hours = 49) #timedelta(days = 30)# timedelta(hours = 48)#timedelta(days = 30) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
     # total_runtime = timedelta(days=10)
     # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
     endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
     # integration timestep
-    dt_timestep = timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
+    dt_timestep =timedelta(minutes=1) # timedelta(minutes=5) # timedelta(seconds=10)#timedelta(seconds=10)# timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
     dt_timestep_initial = timedelta(seconds=1)
     runtime_initial = timedelta(minutes=5)
     # write timestep
@@ -109,7 +110,7 @@ def run_experiment(pt, rep,year,month,day):
     # Buoyancy (rho_particle/rho_fluid)
     B = 0.68
     # stokes relaxation time
-    tau = 2994.76#  2759.97 # 2994.76
+    tau = 3196.29 #  2994.76#  2759.97 # 2994.76
     # Rep = 1000# 100 #457#300 # 1000 # 5000 
     def factor_drag(Rep):
         c_Rep = 1 + Rep / (4. * (1 +  np.sqrt(Rep))) + Rep / 60.
@@ -119,29 +120,29 @@ def run_experiment(pt, rep,year,month,day):
 
     # newton drag length scale
     ld = 0.70 
-    #random displacement distance starting position in meters
-    d = 300 # m 
+
     # 
     # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
-    land_handling = 'free_slip'#'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
+    land_handling = 'anti_beaching' #free_slip'#'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 
     save_vorticity = False
-    save_fluid_velocity = False
-    save_slip_velocity = False
+    save_fluid_velocity = True
+    save_slip_velocity = True
+    save_forces = True
     if( pt in ('inertial_drag_Rep', 'inertial_SM_drag_Rep')):
         save_slip_velocity = True
     
 
-    coriolis = True
-    gradient = True # False
+    coriolis = True #Fal
+    gradient = True #True # False
     
 
     # particle release location
     # option location is North sea, custom, doggersbank, Norwegian trench
-    loc = 'custom'#'NWES' #'NWES' #'north-sea'
+    loc =  'NWES'#'custom'#'NWES' #'NWES' #'north-sea'
     # options for grid (only does something for norwegian trench at the moment)
     # are square for which we use the gridpoint of the velocity field or hexagonal 
-    grid = 'square'#hex' 
+    grid = 'hex'#'square'#hex' 
     # time_resolution = 'daily' #option are daily or hourly 
 
     # set custom region:
@@ -388,15 +389,19 @@ def run_experiment(pt, rep,year,month,day):
 
     # setting kernels
     if (particle_type == 'inertial_initSM'):
-        kernels_init = [InitializeParticles2D_MRSM, deleteParticle]
-    else:
         kernels_init = [InitializeParticles2D, deleteParticle]
+    else:
+        kernels_init = [InitializeParticles2D, deleteParticle] # try this to see if it fixes anything? 
 
     kernels = [too_close_to_edge]
     if(land_handling == 'anti_beaching'):
         kernels.append(displace)
     if(save_vorticity == True):
         kernels.append(measure_vorticity)
+    if(save_forces==True):
+        kernels.append(measure_coriolis_force)
+        kernels.append(measure_gradient_force)
+        kernels.append(measure_vorticity_force)
     # if(save_fluid_velocity == True):
     #     if(particle_type in ('inertial_SM_Rep_constant', 'inertial_SM_drag_Rep')):
     #         kernels.append(measure_slip_velocity_SM)
@@ -435,10 +440,24 @@ def run_experiment(pt, rep,year,month,day):
         kernels.append(set_displacement)
 
     kernels.append(remove_at_bounds) 
-    kernels_init= kernels_init + kernels
+    kernels_init= kernels_init # + kernels
     if (save_vorticity == True):
         setattr(inertialparticle, 'vorticity',
             Variable('vorticity', dtype=np.float32, to_write=True, initial=0))
+        
+    if (save_forces == True):
+        setattr(inertialparticle, 'flift_x',
+            Variable('flift_x', dtype=np.float32, to_write=True, initial=0))
+        setattr(inertialparticle, 'flift_y',
+            Variable('flift_y', dtype=np.float32, to_write=True, initial=0))
+        setattr(inertialparticle, 'fcor_x',
+            Variable('fcor_x', dtype=np.float32, to_write=True, initial=0))
+        setattr(inertialparticle, 'fcor_y',
+            Variable('fcor_y', dtype=np.float32, to_write=True, initial=0))
+        setattr(inertialparticle, 'fgradient_x',
+            Variable('fgradient_x', dtype=np.float32, to_write=True, initial=0))
+        setattr(inertialparticle, 'fgradient_y',
+            Variable('fgradient_y', dtype=np.float32, to_write=True, initial=0))
 
     if (save_fluid_velocity == True):
         print('save uf and vf')
@@ -538,7 +557,7 @@ def run_experiment(pt, rep,year,month,day):
 
 
         # run simulation
-        pset.execute(kernels, runtime=runtime, dt=dt_timestep,verbose_progress=False,  output_file=pfile)
+        pset.execute(kernels, runtime=runtime, dt=dt_timestep,verbose_progress=True,  output_file=pfile)
         
 
     print('Simulation finished!')

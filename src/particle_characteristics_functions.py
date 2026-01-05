@@ -12,6 +12,19 @@ import numpy as np
 import xarray as xr
 
 
+def dynamic_viscosity_Sharqawy( T : float ,S: float) -> float:
+    """
+    calculation of dynamic viscosity based on eq 22 from paper Sharqawy 2010. 
+    It depends on:
+    - T temperature[degrees C]
+    - S salinity  [kg/kg]
+    """
+    muw = 4.2844e-5 + 1/ (0.157 * (T + 64.993)**2 - 91.296)
+    A = 1.5413 + 1.998e-2 * T - 9.52e-5 * T**2
+    B = 7.974 - 7.561e-2 *T + 4.724e-4 * T**2
+    mu = muw * (1 + A * S + B * S**2)
+    return mu
+
 def buoyancy_drifter(
     diameter: float, heigth: float, mass: float, density_fluid: float
 ) -> float:
@@ -36,6 +49,8 @@ def stokes_relaxation_time(
     """
     return (1 + 2 * buoyancy) * diameter * diameter / (36 * kinematic_viscosity)
 
+def Oseen_time(slip_velocity : float , kinematic_viscosity: float) -> float :
+    return kinematic_viscosity / (slip_velocity**2)
 
 def Re_particle(Uslip: float, diameter: float, kinematic_viscosity: float) -> float:
     return np.abs(Uslip) * diameter / kinematic_viscosity
