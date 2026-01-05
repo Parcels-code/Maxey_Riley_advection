@@ -5,7 +5,7 @@ mathtext.rm : Arial
 legend.fontsize : 20 
 legend.frameon:  False
 figure.figsize : 10,8
-legend.handlelength : 3 
+legend.handlelength : 2.5 
 axes.labelsize: 20 
 xtick.direction : in 
 ytick.direction : in 

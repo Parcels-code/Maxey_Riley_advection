@@ -9,3 +9,6 @@
 **.zarr**
 **.nc**
 figures/
+input_data/
+analysis/cache/
+analysis/data/
