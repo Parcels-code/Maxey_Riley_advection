@@ -1,11 +1,5 @@
 """
 Standard analysis functions
-TO DO: ADD
-    - trajectory length
-    -
-    -
-    -
-
 """
 
 # import packages
