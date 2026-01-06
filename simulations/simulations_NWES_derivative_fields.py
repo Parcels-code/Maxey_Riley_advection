@@ -11,7 +11,7 @@ without Basset history term and Faxen corrections. We use a 2D simulation.
 We perform test simulations using an analytical flowfield given by and created
 in release/analytical_flowfields.py. We load this field from a netcdf file
 
-The drifters have an outer diamter of 24 cm which we use as radius of the particle.  
+The drifters have an outer diamter of 25 cm which we use as radius of the particle.  
 """
 # import needed packages
 import click 

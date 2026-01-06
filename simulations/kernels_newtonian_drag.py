@@ -7,10 +7,9 @@ def MRAdvectionRK4_2D_Newtonian_drag(particle, fieldset, time):
     """
     Advection of particles using Maxey-Riley equation in 2D without Basset
     history term and Faxen corrections without sinking or floating force.
-    We use the newtonian drag formulation for particle reynolds
-    numbers > 3000. Note that we work with lengthscale here (tau now represents
-    lengthscale which is given in meters and should be converted to degrees in 
-    the calculation)
+    We use the newtonian drag formulation.  Note that we work with
+    lengthscale here (tau now represents lengthscale which is given in 
+    meters and should be converted to degrees in the calculation)
     The equation is numerically integrated using the 4th order runge kutta
     scheme for a 2nd order ODE equation. We appromate the time derivative at t 
     (1rst step rk4) with a forward finite difference and the time derivative

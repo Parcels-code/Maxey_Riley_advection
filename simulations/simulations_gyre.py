@@ -41,7 +41,7 @@ def run_experiment(pt, rep,year,month,day):
     Rep = rep
     particle_type = pt
     dt_timestep = timedelta(minutes=30)
-    dt_write = timedelta(hours=1)
+    dt_write = timedelta(hours=24)
     dt_timestep_initial = timedelta(minutes=1)
     runtime_initial = timedelta(minutes=30)
     B = 0.68
@@ -68,9 +68,9 @@ def run_experiment(pt, rep,year,month,day):
 
     land_handling = None # c grid
     starttime = datetime(year,month,day)
-    runtime = timedelta(days=30)
+    runtime = timedelta(days=365)
     endtime = starttime + runtime
-    dtime_data = timedelta(days=1)    #je stelt hier handmatig in wat de tijdsresolutie is van je data #deze kan niet naar minuten (13/5/2025)
+    dtime_data = timedelta(days=1)    #set time resolution data manually (cannot be minutes)
     dtime_execute = timedelta(minutes=10)
 
     output_directory = ('/storage/shared/oceanparcels/'
