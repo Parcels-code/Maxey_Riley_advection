@@ -1,9 +1,17 @@
+"""
+Script to calculate spatial and temporal derivative fields of the velocity
+fields in the NWES. The derivative fields are saved to a netcdf file, which
+can be used as input for simulations_NWES_derivative_fields.py 
+"""
+
+
 import xarray as xr
 import numpy as np
 import xgcm 
 from datetime import datetime, timedelta
 import sys
-sys.path.append("/nethome/4291387/Maxey_Riley_advection/Maxey_Riley_advection/simulations")
+sys.path.append("/nethome/4291387/Maxey_Riley_advection/" \
+"Maxey_Riley_advection/simulations")
 from helper import create_filelist
 
 #
@@ -16,14 +24,17 @@ starttimes = [datetime(2023,9,1,00,00,00),
              datetime(2024,2,1,00,00,00)]
 
 # set directories and files
-directory_in = '/storage/shared/oceanparcels/input_data/CopernicusMarineService/NORTHWESTSHELF_ANALYSIS_FORECAST_PHY_004_013/'
+directory_in = ('/storage/shared/oceanparcels/input_data/'
+                'CopernicusMarineService/'
+                'NORTHWESTSHELF_ANALYSIS_FORECAST_PHY_004_013/')
 input_filename_base = ('CMEMS_v6r1_NWS_PHY_NRT_NL_01hav3D_'
                         '{year_t:04d}{month_t:02d}{day_t:02d}_'
                         '{year_t:04d}{month_t:02d}{day_t:02d}_'
-                        'R{year_tplus:04d}{month_tplus:02d}{day_tplus:02d}_HC01.nc')
+                        'R{year_tplus:04d}'
+                        '{month_tplus:02d}{day_tplus:02d}_HC01.nc')
 
 
-#function to drop z levels when reading in data (only intrested in surface current)
+# function to drop z levels when reading in data (surface only)
 depth_level_index=0
 def preprocess(ds):
     return ds.isel(depth=depth_level_index)
@@ -39,7 +50,12 @@ for starttime in starttimes:
     oceanfiles = create_filelist(directory_in,input_filename_base,starttime,endtime,dt_file,dt_file)
 
 
-    ds = xr.open_mfdataset(oceanfiles, combine='nested', concat_dim="time",preprocess= preprocess,drop_variables=['so','thetao'])
+    ds = xr.open_mfdataset(oceanfiles, 
+                           combine='nested', 
+                           concat_dim="time",
+                           preprocess= preprocess,
+                           drop_variables=['so','thetao'])
+
     # grid resolution model
     delta_lon = ds.longitude[1]-ds.longitude[0]
     delta_lat  = ds.latitude[1]-ds.latitude[0]
@@ -49,12 +65,12 @@ for starttime in starttimes:
     # define left points grids
     lon_left = ds.longitude - 0.5*delta_lon
     lon_left=lon_left.rename(longitude="lon_left")
-
     lat_left = ds.latitude - 0.5*delta_lat
     lat_left=lat_left.rename(latitude="lat_left")
 
     time_left = ds.time-0.5*delta_t
     time_left = time_left.rename(time='time_left')
+    
     # add left points to coordinates data
     ds = ds.assign_coords(lon_left = lon_left)
     ds = ds.assign_coords(lat_left = lat_left)
