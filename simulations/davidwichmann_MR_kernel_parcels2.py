@@ -1,7 +1,5 @@
-# this file contains the kernel written by David Wichmann for advecting with the MR equation using a RK4 scheme which is written for parcels 2 or even 1
-# I will use this as inspiration for writing a parcels 3 kernel for advecting with the MR equation. The kernel presented here is for 2d flows. I will 
-# generalize this for 3d flows
-# source: 
+# this file contains the kernel written by David Wichmann for advecting with the MR equation using a RK4 scheme which is written for parcels 2
+# This was used as inspiration for writing a parcels 3 kernel for advecting with the MRG equation. The kernel presented here is for 2d flows
 
 
 def MRslow2D_RK4_beaching(particle, fieldset, time, dt):
