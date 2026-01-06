@@ -96,12 +96,12 @@ def run_experiment(pt, rep,year,month,day):
                         #   datetime(2024, 4, 1, 0, 0, 0, 0)])
     # settings for temporal releaste
 
-    runtime =timedelta(days = 2) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
+    runtime =timedelta(days = 30) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
     # total_runtime = timedelta(days=10)
     # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
     endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
     # integration timestep
-    dt_timestep = timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
+    dt_timestep = timedelta(minutes=5)#timedelta(seconds=30)#timedelta(minutes=5)
     dt_timestep_initial = timedelta(seconds=1)
     runtime_initial = timedelta(minutes=5)
     # write timestep
@@ -123,7 +123,7 @@ def run_experiment(pt, rep,year,month,day):
     d = 300 # m 
     # 
     # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
-    land_handling = 'free_slip'#'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
+    land_handling = 'anti_beaching'#'free_slip'#'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 
     save_vorticity = False
     save_fluid_velocity = False
@@ -138,10 +138,10 @@ def run_experiment(pt, rep,year,month,day):
 
     # particle release location
     # option location is North sea, custom, doggersbank, Norwegian trench
-    loc = 'custom'#'NWES' #'NWES' #'north-sea'
+    loc = 'NWES'#'custom'#'NWES' #'NWES' #'north-sea'
     # options for grid (only does something for norwegian trench at the moment)
     # are square for which we use the gridpoint of the velocity field or hexagonal 
-    grid = 'square'#hex' 
+    grid = 'hex'#'square'#hex' 
     # time_resolution = 'daily' #option are daily or hourly 
 
     # set custom region:
