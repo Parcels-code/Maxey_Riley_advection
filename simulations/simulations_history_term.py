@@ -31,7 +31,7 @@ from kernels import measure_acceleration_force, measure_particle_velocity, measu
 from particle_characteristics_functions import factor_drag_white1991
 
 field_directory = ('/storage/shared/oceanparcels/input_data/CopernicusMarineService/'
-                   'NORTHWESTSHELF_ANALYSIS_FORECAST_PHY_004_013/')
+                   'OLD_NWSHELF_ANALYSIS_FORECAST_PHY_004_013/')
 land_directory = ('/storage/shared/oceanparcels/'
                   'output_data/data_Meike/NWES/')
 output_directory = ('/storage/shared/oceanparcels/'
@@ -96,10 +96,10 @@ indices = {}
 #########################
 #       Set Fields      #
 #########################
-start_new_dataset = datetime(2023, 9, 1, 0, 0, 0, 0)
+start_NOW_dataset = datetime(2023, 9, 1, 0, 0, 0, 0)
 dt_field = timedelta(days=1)
 # variables and dimensions (3D)
-print('use new dataset (Nologin Spain)')
+print('use NOW dataset (Nologin Spain)')
 variables = {'U': 'uo',
              'V': 'vo'}
 
@@ -132,7 +132,7 @@ if(land_handling == 'partialslip'):
     fieldset.V.interp_method = 'partialslip'
 
 if (land_handling == 'anti_beaching'):    
-    antibeachingfile = land_directory + 'anti_beaching_NWES_new.nc'
+    antibeachingfile = land_directory + 'anti_beaching_NWES_NOW.nc'
     
     filenames_anti_beaching = {'dispU': antibeachingfile,
                             'dispV': antibeachingfile,
@@ -225,10 +225,10 @@ if (particle_type in ('inertial_Rep_constant', 'inertial_SM_Rep_constant')):
 
 
 
-land_mask_file = land_directory + 'NWS_mask_land_new.nc'
-doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_new.nc' 
-norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_new.nc' 
-NWES_hex_file = land_directory + 'NWES_hex_release_new_2.nc' 
+land_mask_file = land_directory + 'NWS_mask_land_NOW.nc'
+doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_NOW.nc' 
+norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_NOW.nc' 
+NWES_hex_file = land_directory + 'NWES_hex_release_NOW_res6.nc' 
 
 
 

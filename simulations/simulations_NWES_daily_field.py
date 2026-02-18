@@ -199,10 +199,10 @@ def run_experiment(pt, rep,year,month,day):
                 setattr(inertialparticle, 'diameter',
                 Variable('C_Rep', dtype=np.float32, to_write=False, initial=C_Rep))
 
-    land_mask_file = land_directory + 'NWS_mask_land_new.nc'
-    doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_new.nc' 
-    norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_new.nc' 
-    NWES_hex_file = land_directory + 'NWES_daily_hex_release_new.nc' 
+    land_mask_file = land_directory + 'NWS_mask_land_NOW.nc'
+    doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_NOW.nc' 
+    norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_NOW.nc' 
+    NWES_hex_file = land_directory + 'NWES_daily_hex_release_NOW_res6.nc' 
 
     if(loc == 'NWES'):
         if(grid == 'square'):

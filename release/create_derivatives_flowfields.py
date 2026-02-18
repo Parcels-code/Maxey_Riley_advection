@@ -26,7 +26,7 @@ starttimes = [datetime(2023,9,1,00,00,00),
 # set directories and files
 directory_in = ('/storage/shared/oceanparcels/input_data/'
                 'CopernicusMarineService/'
-                'NORTHWESTSHELF_ANALYSIS_FORECAST_PHY_004_013/')
+                'OLD_NWSHELF_ANALYSIS_FORECAST_PHY_004_013/')
 input_filename_base = ('CMEMS_v6r1_NWS_PHY_NRT_NL_01hav3D_'
                         '{year_t:04d}{month_t:02d}{day_t:02d}_'
                         '{year_t:04d}{month_t:02d}{day_t:02d}_'

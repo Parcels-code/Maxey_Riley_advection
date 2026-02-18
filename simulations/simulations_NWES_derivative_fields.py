@@ -41,7 +41,7 @@ def run_experiment(pt, rep,year,month,day,d):
     # set directories
     Rep  = rep
     field_directory = ('/storage/shared/oceanparcels/input_data/CopernicusMarineService/'
-                    'NORTHWESTSHELF_ANALYSIS_FORECAST_PHY_004_013/')
+                    'OLD_NWSHELF_ANALYSIS_FORECAST_PHY_004_013/')
     land_directory = ('/storage/shared/oceanparcels/'
                     'output_data/data_Meike/NWES/')
     output_directory = ('/storage/shared/oceanparcels/'
@@ -159,7 +159,7 @@ def run_experiment(pt, rep,year,month,day,d):
     #########################
     #       Set Fields      #
     #########################
-    start_new_dataset = datetime(2023, 9, 1, 0, 0, 0, 0)
+    start_NOW_dataset = datetime(2023, 9, 1, 0, 0, 0, 0)
     dt_field = timedelta(days=1)
     # variables and dimensions (3D)
     variables = {'U': 'uo',
@@ -169,15 +169,15 @@ def run_experiment(pt, rep,year,month,day,d):
                 'lon': 'lon',
                 'time': 'time'}
 
-    if (starttime >= start_new_dataset): 
-        print('use new dataset (Nologin Spain)')
+    if (starttime >= start_NOW_dataset): 
+        print('use NOW dataset (Nologin Spain)')
         dimensions = {'lat': 'latitude',
                     'lon': 'longitude',
                     'time': 'time'}
     else:
-        print('use old dataset (UK Met Office)')
+        print('use Met dataset (UK Met Office)')
 
-    if (starttime >= start_new_dataset):
+    if (starttime >= start_NOW_dataset):
         dt_name_field = timedelta(days=1)
         input_filename = ('CMEMS_v6r1_NWS_PHY_NRT_NL_01hav3D_'
                         '{year_t:04d}{month_t:02d}{day_t:02d}_'
@@ -209,9 +209,9 @@ def run_experiment(pt, rep,year,month,day,d):
         fieldset.V.interp_method = 'partialslip'
 
     if (land_handling == 'anti_beaching'):    
-        antibeachingfile = land_directory + 'anti_beaching_NWES_old.nc'
-        if(starttime >= start_new_dataset):
-            antibeachingfile = land_directory + 'anti_beaching_NWES_new.nc'
+        antibeachingfile = land_directory + 'anti_beaching_NWES_Met.nc'
+        if(starttime >= start_NOW_dataset):
+            antibeachingfile = land_directory + 'anti_beaching_NWES_NOW.nc'
         
         filenames_anti_beaching = {'dispU': antibeachingfile,
                                 'dispV': antibeachingfile,
@@ -372,16 +372,16 @@ def run_experiment(pt, rep,year,month,day,d):
                 setattr(inertialparticle, 'diameter',
                 Variable('C_Rep', dtype=np.float32, to_write=False, initial=C_Rep))
 
-    land_mask_file = land_directory + 'NWS_mask_land_old.nc'
-    doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_old.nc' 
-    norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_old.nc' 
-    norwegian_trench_hex_file = land_directory + 'NWS_hex_release_norwegian_trench_old.nc' 
-    NWES_hex_file = land_directory + 'NWES_hex_release_new_2.nc' 
-    if(starttime >= start_new_dataset):
-        land_mask_file = land_directory + 'NWS_mask_land_new.nc'
-        doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_new.nc' 
-        norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_new.nc' 
-        NWES_hex_file = land_directory + 'NWES_hex_release_new_2.nc' 
+    land_mask_file = land_directory + 'NWS_mask_land_Met.nc'
+    doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_Met.nc' 
+    norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_Met.nc' 
+    norwegian_trench_hex_file = land_directory + 'NWS_hex_release_norwegian_trench_Met.nc' 
+    NWES_hex_file = land_directory + 'NWES_hex_release_Met_res6.nc' 
+    if(starttime >= start_NOW_dataset):
+        land_mask_file = land_directory + 'NWS_mask_land_Now.nc'
+        doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_Now.nc' 
+        norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_Now.nc' 
+        NWES_hex_file = land_directory + 'NWES_hex_release_Now_res6.nc' 
 
     # doggersbank_mask_file= land_directory +' NWS_mask_doggersbank.nc' # still needs to be created use depth
     if (loc == 'custom'):
