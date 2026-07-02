@@ -47,3 +47,34 @@ def derivative_middle(var : xr.DataArray, dt: float) -> xr.DataArray:
     varmin = var.shift(obs=-1)
     varplus = var.shift(obs=1)
     return (varplus-varmin)/(2 * dt)
+
+def Haversine(lon1, lat1, lon2, lat2):
+    """
+    Function to calculate the path lenth in km between 2 points using the
+    Haversine formula. It takes as input:
+    - lon1: longitude of point 1 in degrees
+    - lat1: latitude of point 1 in degrees
+    - lon2: longitude of point 2 in degrees
+    - lon2: latitude of point 2 in degrees
+
+    Source: https://en.wikipedia.org/wiki/Haversine_formula
+    """
+    mean_radius_earth = 6371
+    deg2rad = np.pi / 180
+    arg = (
+        np.sin(0.5 * (lat2 - lat1) * deg2rad) ** 2
+        + np.cos(lat2 * deg2rad)
+        * np.cos(lat1 * deg2rad)
+        * np.sin(0.5 * (lon2 - lon1) * deg2rad) ** 2
+    )
+    d = 2 * mean_radius_earth * np.arcsin(np.sqrt(arg))
+    return d
+
+def skill_score(lon, lat, lon_ref, lat_ref):
+    # relative dist over trajectory length summed over time
+    D = Haversine(lon, lat, lon_ref, lat_ref)
+    L = trajectory_length(lon_ref, lat_ref)
+    Dsum = D.cumsum(dim='obs')
+    Lsum = L.cumsum(dim='obs')
+    return 1.-Dsum/Lsum
+
