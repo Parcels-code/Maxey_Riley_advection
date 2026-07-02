@@ -109,7 +109,7 @@ def run_experiment(pt, rep,year,month,day,d):
     # Buoyancy (rho_particle/rho_fluid)
     B = 0.68
     # stokes relaxation time
-    tau = 3196.29 #  2994.76#  2759.97 # 2994.76
+    tau = 3196.29 #  
     # Rep = 1000# 100 #457#300 # 1000 # 5000 
     def factor_drag(Rep):
         c_Rep = 1 + Rep / (4. * (1 +  np.sqrt(Rep))) + Rep / 60.

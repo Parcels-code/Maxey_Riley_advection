@@ -25,8 +25,8 @@ from datetime import datetime, timedelta
 from helper import create_filelist, set_particles_region, displace_coordinates
 from kernels import InertialParticle2D, InertialParticle3D, deleteParticle
 from kernels import InitializeParticles2D, InitializeParticles2D_MRSM, InitializeParticles3D
-from kernels import MRAdvectionRK4_2D, MRAdvectionRK4_3D, MRAdvectionRK4_2D_Newtonian_drag, MRAdvectionRK4_2D_drag_Rep, MRSMAdvectionRK4_2D_drag_Rep
-from kernels import MRSMAdvectionRK4_2D, MRSMAdvectionRK4_3D, MRSMAdvectionRK4_2D_drag_Rep_constant, MRAdvectionRK4_2D_drag_Rep_constant
+from kernels import MRAdvectionRK4_2D_drag_Rep, MRSMAdvectionRK4_2D_drag_Rep
+from kernels import MRSMAdvectionRK4_2D_drag_Rep_constant, MRAdvectionRK4_2D_drag_Rep_constant
 from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity
 from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_SM
 
@@ -45,7 +45,7 @@ def run_experiment(pt, rep,year,month,day):
     land_directory = ('/storage/shared/oceanparcels/'
                     'output_data/data_Meike/NWES/')
     output_directory = ('/storage/shared/oceanparcels/'
-                        'output_data/data_Meike/MR_advection/NWES/test_history_term/')
+                        'output_data/data_Meike/MR_advection/NWES/')
     # output_file_b = (output_directory + '{particle_type}/{loc}_'
     #                  'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
     #                  'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
@@ -58,17 +58,17 @@ def run_experiment(pt, rep,year,month,day):
     output_file_b = (output_directory + '{particle_type}/{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                    'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
+                    'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}_freq5min.zarr')
 
     output_file_Rep_b = (output_directory + '{particle_type}/{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
+                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}_freq5min.zarr')
 
 
     output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                             'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
-                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}.zarr')
+                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_freq5min.zarr')
     output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
                             'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                             'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_d{d:04d}_{land_handling}.zarr')
@@ -96,20 +96,20 @@ def run_experiment(pt, rep,year,month,day):
                         #   datetime(2024, 4, 1, 0, 0, 0, 0)])
     # settings for temporal releaste
 
-    runtime =timedelta(days = 30) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
+    runtime =timedelta(days = 2) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
     # total_runtime = timedelta(days=10)
     # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
     endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
     # integration timestep
-    dt_timestep = timedelta(minutes=5)#timedelta(seconds=30)#timedelta(minutes=5)
+    dt_timestep = timedelta(seconds=10)#timedelta(seconds=30)#timedelta(minutes=5)
     dt_timestep_initial = timedelta(seconds=1)
     runtime_initial = timedelta(minutes=5)
     # write timestep
-    dt_write = timedelta(hours=1)# timedelta(minutes=15)#timedelta(hours=1)# timedelta(hours=1) #  timedelta(minutes=5)#
+    dt_write = timedelta(minutes=5)# timedelta(minutes=15)#timedelta(hours=1)# timedelta(hours=1) #  timedelta(minutes=5)#
     # Buoyancy (rho_particle/rho_fluid)
     B = 0.68
     # stokes relaxation time
-    tau = 2994.76#  2759.97 # 2994.76
+    tau =3196.29
     # Rep = 1000# 100 #457#300 # 1000 # 5000 
     def factor_drag(Rep):
         c_Rep = 1 + Rep / (4. * (1 +  np.sqrt(Rep))) + Rep / 60.
