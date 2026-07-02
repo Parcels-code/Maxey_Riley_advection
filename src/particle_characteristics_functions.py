@@ -223,3 +223,10 @@ def measure_coriolis_force(particle, fieldset, time):
         / 180.0
     )
     particle.fcor_v = fcor_v * fieldset.Rearth * math.pi / 180.0
+
+def dynamic_viscosity_Sharqawy(T,S):
+    muw = 4.2844e-5 + 1/ (0.157 * (T + 64.993)**2 - 91.296)
+    A = 1.5413 + 1.998e-2 * T - 9.52e-5 * T**2
+    B = 7.974 - 7.561e-2 *T + 4.724e-4 * T**2
+    mu = muw * (1 + A * S + B * S**2)
+    return mu
