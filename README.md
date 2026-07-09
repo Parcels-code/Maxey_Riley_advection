@@ -13,6 +13,14 @@ The script `simulation.py` can be used to run a Parcels simulation of tracer par
 In the notebook `test_finite_differences_parcels.ipynb` we test the what are the optimal settings for taking gradients using the finite difference method in parcels, which is needed to calculate the material derivative of the fluid flow in the MR-equations. 
 
 ## anaylsis
+### main paper
+- `particles_analysis_measured_Rep.ipynb`: analysis of the measured Reynolds numbers (computed using measured slip velocities) of the trajectories of full MRG particles (short simulation of 2 days, write freq every hour ). The plots are used in Fig. 1 of of the paper. 
+
+
+### SI
+
+
+### Other
 In the notebook `particles_in_analytical_flow.ipynb` the trajectories of the tracer particles and inertial particles in 2D and 3D vortex flows are plotted.  
 
 ## src
