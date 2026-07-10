@@ -15,7 +15,9 @@ In the notebook `test_finite_differences_parcels.ipynb` we test the what are the
 ## anaylsis
 ### main paper
 - `particles_analysis_measured_Rep.ipynb`: analysis of the measured Reynolds numbers (computed using measured slip velocities) of the trajectories of full MRG particles (short simulation of 2 days, write freq every hour ). The plots are used in Fig. 1 of of the paper. 
-- `particles_in_NEWS_coriolis_gradient`: analysis of the trajectory differences between SM-MRG particles and tracer particles (simulated for 1 month, repeated for 6 months from 1 sep 2023 to 2 march 2024). Trajectories are analysed using trajectory lengh difference after 30 days and average relative distance to tracer over time. The plots are used in Fig. 5 of the paper
+- `particles_in_NWES_hourly_field.ipynb`:analysis of the trajectory differences between SM-MRG particles (with several drag correction factors) and tracer particles (simulated for 1 month, repeated for 6 months from 1 sep 2023 to 2 march 2024) for fieldsets with an hourly resolution. Trajectories are analysed using trajectory lengh difference after 30 days and average relative distance to tracer over time. The plots are used in Fig. 4 of the paper
+- `particles_in_NWES_hourly_field.ipynb`:analysis of the trajectory differences between SM-MRG particles (with several drag correction factors) and tracer particles (simulated for 1 month, repeated for 6 months from 1 sep 2023 to 2 march 2024) for fieldsets with an hourly resolution. Trajectories are analysed using trajectory lengh difference after 30 days and average relative distance to tracer over time. The plots are used in Fig. 4 of the paper. 
+- `particles_in_NWES_coriolis_gradient`: analysis of the trajectory differences between SM-MRG particles (with several drag correction factors) and tracer particles (simulated for 1 month, repeated for 6 months from 1 sep 2023 to 2 march 202, fieldsets have hourly resoluitons). Trajectories are analysed using trajectory lengh difference after 30 days and average relative distance to tracer over time. The plots are used in Fig. 5 of the paper
 
 
 ### SI
