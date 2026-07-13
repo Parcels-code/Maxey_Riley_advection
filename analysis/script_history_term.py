@@ -35,7 +35,7 @@ def run_experiment(pt, rep, twindow, dt_resample):
     runtime = timedelta(days =2)
     endtime = starttime + runtime
     loc = 'NWES'
-    land_handling = 'anti_beaching'
+    land_handling = 'delete_beaching'#'anti_beaching'
     coriolis = True
     B = 0.68
     tau = 3196
@@ -59,7 +59,7 @@ def run_experiment(pt, rep, twindow, dt_resample):
     omega_earth =  7.2921e-5 #[rad/sec]
 
 
-
+    writefreq = 60 #
     
 
     # import data set names and directories
@@ -67,10 +67,10 @@ def run_experiment(pt, rep, twindow, dt_resample):
     basefile_Rep_constant = (base_directory + '{particle_type}/{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
+                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}_freq{freqmin:02d}min.zarr') 
 
     basefile_Rep_drag = (base_directory + '{particle_type}/{loc}_start{y_s:04d}_{m_s:02d}_{d_s:02d}'
-                    '_end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}.zarr')
+                    '_end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_gradient_{gradient}_freq{freqmin:02d}min.zarr') 
 
     basefiles={
             'inertial_Rep_constant':basefile_Rep_constant,
@@ -92,7 +92,8 @@ def run_experiment(pt, rep, twindow, dt_resample):
                                     coriolis = coriolis,
                                     gradient = gradient,
                                     particle_type = pt,
-                                    Rep = Rep)
+                                    Rep = Rep,
+                                    freqmin = writefreq)
     ds = xr.open_dataset(file,
     engine='zarr',
     chunks={'trajectory':nparticles, 'obs':chunck_time},
@@ -336,9 +337,9 @@ def run_experiment(pt, rep, twindow, dt_resample):
     twindow_int = int(twindow*10) 
     dt_resample_int=int(dt_resample*10) 
     if(pt in ('inertial_Rep_constant', 'inertial_SM_Rep_constant')):
-        output_name = f'/storage/shared/oceanparcels/output_data/data_Meike/MR_advection/NWES/{pt}/history_term_Mei_Rep{Rep:04d}_twindow{twindow_int:06d}_tresample{dt_resample_int:04d}.netcdf'
+        output_name = f'/storage/shared/oceanparcels/output_data/data_Meike/MR_advection/NWES/{pt}/history_term_{land_handling}_Mei_Rep{Rep:04d}_twindow{twindow_int:06d}_tresample{dt_resample_int:04d}.netcdf'
     else: 
-        output_name = f'/storage/shared/oceanparcels/output_data/data_Meike/MR_advection/NWES/{pt}/history_term_Mei_twindow{twindow_int:06d}_tresample{dt_resample_int:04d}.netcdf'
+        output_name = f'/storage/shared/oceanparcels/output_data/data_Meike/MR_advection/NWES/{pt}/history_term_{land_handling}_Mei_twindow{twindow_int:06d}_tresample{dt_resample_int:04d}.netcdf'
     ds_history.to_netcdf(output_name)
     print(output_name + ' simulation finished')
 
