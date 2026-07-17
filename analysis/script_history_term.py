@@ -2,7 +2,7 @@
 Calculating history term
 author: Meike F. Bos
 creation date: 28/10/2025
-description: script to calcualte create history term per particle
+description: script to calculate the Mei/Adrain history term with coriolis corrections per particle
 """
 import click 
 import numpy as np
@@ -19,7 +19,6 @@ sys.path.append("/nethome/4291387/Maxey_Riley_advection/Maxey_Riley_advection/sr
 from particle_characteristics_functions import dynamic_viscosity_Sharqawy, factor_drag_white1991
 
 
-# not sure whether this does anything
 
 @click.command()
 @click.option('--rep',default=0, help ='Particle Reynolds number',type=int)
