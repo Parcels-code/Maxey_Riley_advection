@@ -193,6 +193,24 @@ def displace(particle, fieldset, time):
         particle_dlon += particle.dU * particle.dt
         particle_dlat += particle.dV * particle.dt
 
+############# delete beaching particles ##################
+def beach_particles(particle, fieldset, time):
+    """
+    Kernel to check if particles are close to the coast and if they are label
+    them as beached and delete them from simulations. 
+    Dependencies: 
+    - fieldset with distance to shore (distance2shore)
+    - particle variable beached (0 or 1)
+    """
+    
+    d2s = fieldset.distance2shore[
+        time, particle.depth, particle.lat, particle.lon
+    ]
+    if(d2s < 0.1): 
+        particle.beached = 1
+        particle.delete()
+        
+    
 
 ############## function to measure properties flow at particle level ##########
 def measure_vorticity(particle, fieldset, time):
@@ -257,19 +275,110 @@ def measure_coriolis_force(particle, fieldset, time):
     """
     Bterm = 3. / (1. + 2. * particle.B)
     Bterm2 = 2 * (1 - particle.B) / (1 + 2 * particle.B) 
+    scale_x =  fieldset.Rearth  * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    scale_y =  fieldset.Rearth * math.pi / 180. 
     uf, vf = fieldset.UV[time, particle.depth, particle.lat,
                               particle.lon]
-
+    uf_x = uf * scale_x
+    vf_y = vf * scale_y
+    up_x = particle.up * scale_x
+    vp_y = particle.vp * scale_y
     # coriolis force
     f = 2 * fieldset.Omega_earth * math.sin(particle.lat * math.pi / 180)
-    ucor = -(vf - particle.vp) * f
-    vcor = (uf - particle.up) * f
-    upcor = -particle.vp * f
-    vpcor = particle.up * f
+    ucor = -(vf_y - vp_y) * f
+    vcor = (uf_x - up_x) * f
+    upcor = -vp_y * f
+    vpcor = up_x * f
     fcor_u = Bterm * ucor+ Bterm2 * upcor
     fcor_v = Bterm * vcor + Bterm2 * vpcor
-    particle.fcor_lon = fcor_u * fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
-    particle.fcor_lat = fcor_v * fieldset.Rearth * math.pi / 180. 
+    particle.fcor_x = fcor_u
+    particle.fcor_y = fcor_v
+
+def measure_gradient_force(particle, fieldset, time):
+    """
+    Kernel to measure the acceleration force (2D) of the fluid at the location 
+    of the particle
+    """
+    Bterm = 3. / (1. + 2. * particle.B)
+    norm_deltax = 1.0 / (2.0 * fieldset.delta_x)
+    norm_deltay = 1.0 / (2.0 * fieldset.delta_y)
+    norm_deltat = 1.0 / (1.0 * particle.dt)
+    scale_x =  fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    scale_y = fieldset.Rearth * math.pi / 180. 
+
+    # read in velocity at location of particle
+    (uf1, vf1) = fieldset.UV[time,
+                             particle.depth, particle.lat, particle.lon]
+
+    uf1_x = uf1 * scale_x
+    vf1_y = vf1 * scale_y
+    # calculate time derivative of fluid field
+    (uf_tp1, vf_tp1) = fieldset.UV[time+particle.dt,
+                                   particle.depth, particle.lat, particle.lon]
+    (uf_tm1, vf_tm1) = fieldset.UV[time,
+                                   particle.depth, particle.lat, particle.lon]
+    dudt1 = (uf_tp1 - uf_tm1) * norm_deltat * scale_x
+    dvdt1 = (vf_tp1 - vf_tm1) * norm_deltat * scale_y
+
+    # calculate spatial gradients fluid field
+    (u_dxm1, v_dxm1) = fieldset.UV[time, particle.depth, particle.lat,
+                                   particle.lon - fieldset.delta_x]
+    (u_dxp1, v_dxp1) = fieldset.UV[time, particle.depth, particle.lat,
+                                   particle.lon + fieldset.delta_x]
+    (u_dym1, v_dym1) = fieldset.UV[time, particle.depth, particle.lat
+                                   - fieldset.delta_y, particle.lon]
+    (u_dyp1, v_dyp1) = fieldset.UV[time, particle.depth, particle.lat
+                                   + fieldset.delta_y, particle.lon]
+    dudx1 = (u_dxp1 - u_dxm1) * norm_deltax * scale_x / scale_x
+    dudy1 = (u_dyp1 - u_dym1) * norm_deltay * scale_y / scale_y
+    dvdx1 = (v_dxp1 - v_dxm1) * norm_deltax * scale_y / scale_x
+    dvdy1 = (v_dyp1 - v_dym1) * norm_deltay * scale_x / scale_y
+
+    # caluclate material derivative fluid
+    DuDt1 = dudt1 + uf1_x * dudx1 + vf1_y * dudy1
+    DvDt1 = dvdt1 + uf1_x * dvdx1 + vf1_y * dvdy1
+
+     # acceleration force
+    facc_lon = Bterm * DuDt1 
+    facc_lat = Bterm * DvDt1 
+    particle.fgradient_x = facc_lon #* fieldset.Rearth * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    particle.fgradient_y = facc_lat #* fieldset.Rearth * math.pi / 180. 
+
+def measure_vorticity_force(particle, fieldset, time):
+    """
+    Kernel to measure the vorticity of the fluid at the location 
+    of the particle
+
+    Dependencies:
+    - length used for calculating derivatives (delta_x, delta_y)
+    """
+    scale_x =  fieldset.Rearth  * math.cos(particle.lat * math.pi / 180.) * math.pi / 180.
+    scale_y =  fieldset.Rearth * math.pi / 180. 
+    Bterm = 3 / (1+2* particle.B)
+    norm_deltax = 1.0 / (2.0 * fieldset.delta_x)
+    norm_deltay = 1.0 / (2.0 * fieldset.delta_y)
+
+    uf, vf = fieldset.UV[time, particle.depth, particle.lat,
+                              particle.lon]
+    
+    u_dxm, v_dxm = fieldset.UV[time, particle.depth,
+                                 particle.lat, particle.lon - fieldset.delta_x]
+    u_dxp, v_dxp = fieldset.UV[time, particle.depth,
+                                 particle.lat, particle.lon + fieldset.delta_x]
+    u_dym, v_dym = fieldset.UV[time, particle.depth,
+                                 particle.lat - fieldset.delta_y, particle.lon]
+    u_dyp, v_dyp = fieldset.UV[time, particle.depth,
+                                 particle.lat + fieldset.delta_y, particle.lon]
+    dvdx = (v_dxp - v_dxm) * norm_deltax * scale_y / scale_x
+    dudy = (u_dyp - u_dym) * norm_deltay * scale_x / scale_y
+    omega_f = dvdx - dudy
+    uslip = (particle.up - uf)* scale_x
+    vslip = (particle.vp - vf) * scale_y
+
+    particle.flift_x = - Bterm * omega_f * vslip
+    particle.flift_y =Bterm* omega_f * uslip
+
+
 
 def measure_acceleration_force(particle, fieldset, time):
     """
@@ -375,8 +484,8 @@ def MRAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
         particle.vslip = vslip
     #calculate Reynolds number
     Rep = math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
-    if(Rep > 5000): # to make simulation stable
-        Rep = 5000
+    # if(Rep > 5000): # to make simulation stable
+    #     Rep = 5000
     #save Reynolds number
     # particle.Rep = Rep
     #calulate correction factor
@@ -950,13 +1059,13 @@ def MRSMAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     
     uslip = (particle.up - uf1)* fieldset.Rearth * math.cos(particle.lat * math.pi /180) *  math.pi / 180.
     vslip = (particle.vp - vf1)* fieldset.Rearth * math.pi / 180
-    if(fieldset.save_slip_velocity == True):
-        particle.uslip = uslip
-        particle.vslip = vslip
+    # if(fieldset.save_slip_velocity == True):
+    #     particle.uslip = uslip
+    #     particle.vslip = vslip
     #calculate Reynolds number
     Rep = math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
-    if(Rep > 5000):
-        Rep = 5000
+    # if(Rep > 5000):
+    #     Rep = 5000
     #calulate correction factor
     f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
   
@@ -1154,6 +1263,15 @@ def MRSMAdvectionRK4_2D_drag_Rep(particle, fieldset, time):
     particle_dlat += (v1 + 2 * v2 + 2 * v3 + v4) * particle.dt / 6.0
     particle.up = (u1+ 2 * u2 + 2 * u3 + u4) / 6.0
     particle.vp =  (v1 + 2 * v2 + 2 * v3 + v4) / 6.0
+
+    (uf, vf) = fieldset.UV[time, particle.depth,
+                             particle.lat, particle.lon]
+    
+    uslip = (particle.up - uf)* fieldset.Rearth * math.cos(particle.lat * math.pi /180) *  math.pi / 180.
+    vslip = (particle.vp - vf)* fieldset.Rearth * math.pi / 180
+    if(fieldset.save_slip_velocity == True):
+        particle.uslip = uslip
+        particle.vslip = vslip
 
 def MRSMAdvectionRK4_2D_drag_Rep_constant(particle, fieldset, time):
     """
