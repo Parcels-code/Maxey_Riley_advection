@@ -1,5 +1,5 @@
 # Maxey-Riley-Gatinol advection of Macroplastics
-Meike's project on the Maxey-Riley-Gatinol equations for macroplastics in the North west European shelf region, used in [manuscript M.F. Bos et al. 2026](2026https://egusphere.copernicus.org/preprints/2026/egusphere-2026-64/). This project contains the folders `release`,`analysis`, `simulations` and `src`. 
+Meike's project on the Maxey-Riley-Gatinol equations for macroplastics in the North west European shelf region, used in  manuscript M.F. Bos et al. 2026 (https://egusphere.copernicus.org/preprints/2026/egusphere-2026-64/). This project contains the folders `release`,`analysis`, `simulations` and `src`. 
 
 
 ## release
