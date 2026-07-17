@@ -36,6 +36,8 @@ def stokes_relaxation_time(
     """
     return (1 + 2 * buoyancy) * diameter * diameter / (36 * kinematic_viscosity)
 
+def Oseen_time(slip_velocity : float , kinematic_viscosity: float) -> float :
+    return kinematic_viscosity / (slip_velocity**2)
 
 def Re_particle(Uslip: float, diameter: float, kinematic_viscosity: float) -> float:
     return np.abs(Uslip) * diameter / kinematic_viscosity
@@ -47,6 +49,9 @@ def diffusion_time(diameter: float, kinematic_viscosity: float) -> float:
     -  kinematic viscosity water [m^2/s]
     """
     return diameter * diameter / kinematic_viscosity
+
+def MeiAdrian_time(c2: float, Oseen_time : float , diffusion_time : float) -> float: 
+    return (4./np.pi)**(1./3.) * (3.* np.sqrt(Oseen_time)/4. +c2*np.sqrt(diffusion_time))**2
 
 
 def factor_drag_white1991(Rep: float) -> float:
