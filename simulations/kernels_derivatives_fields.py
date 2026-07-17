@@ -506,8 +506,7 @@ def MRSMAdvectionRK4_2D_drag_Rep_derivatives_field(particle, fieldset, time):
         particle.vslip = vslip
     #calculate Reynolds number
     Rep = math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
-    if(Rep > 5000):
-        Rep = 5000
+ 
     #calulate correction factor
     f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
   

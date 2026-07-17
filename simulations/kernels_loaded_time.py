@@ -46,9 +46,9 @@ def MRAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
         particle.uslip = uslip
         particle.vslip = vslip
     #calculate Reynolds number
-    Rep = math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
-    if(Rep > 5000): # to make simulation stable
-        Rep = 5000
+    Rep = 500# math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
+    # if(Rep > 5000): # to make simulation stable
+    #     Rep = 5000
     #save Reynolds number
     # particle.Rep = Rep
     #calulate correction factor
@@ -69,9 +69,9 @@ def MRAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
     
 
     # calculate time derivative of fluid field
-    (uf_tp1, vf_tp1) = fieldset.UV[time+particle.dt,
+    (uf_tp1, vf_tp1) = fieldset.UV[time+fieldset.delta_t,
                                    particle.depth, particle.lat, particle.lon]
-    (uf_tm1, vf_tm1) = fieldset.UV[time-particle.dt,
+    (uf_tm1, vf_tm1) = fieldset.UV[time-fieldset.delta_t,
                                    particle.depth, particle.lat, particle.lon]
     dudt1 = (uf_tp1 - uf_tm1) * norm_deltat
     dvdt1 = (vf_tp1 - vf_tm1) * norm_deltat
@@ -129,9 +129,9 @@ def MRAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
     (uf2, vf2) = fieldset.UV[time1, particle.depth, lat1, lon1]
 
     # calculate time derivative of fluid field
-    (uf_tp2, vf_tp2) = fieldset.UV[time1 + particle.dt,
+    (uf_tp2, vf_tp2) = fieldset.UV[time1 + fieldset.delta_t,
                                    particle.depth, lat1, lon1]
-    (uf_tm2, vf_tm2) = fieldset.UV[time1 - particle.dt, particle.depth, lat1, lon1]
+    (uf_tm2, vf_tm2) = fieldset.UV[time1 - fieldset.delta_t, particle.depth, lat1, lon1]
     dudt2 = (uf_tp2 - uf_tm2) * norm_deltat
     dvdt2 = (vf_tp2 - vf_tm2) * norm_deltat
 
@@ -187,9 +187,9 @@ def MRAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
     (uf3, vf3) = fieldset.UV[time2, particle.depth, lat2, lon2]
 
     # calculate time derivative of fluid field
-    (uf_tp3, vf_tp3) = fieldset.UV[time2 + particle.dt,
+    (uf_tp3, vf_tp3) = fieldset.UV[time2 + fieldset.delta_t,
                                    particle.depth, lat2, lon2]
-    (uf_tm3, vf_tm3) = fieldset.UV[time2 - particle.dt,
+    (uf_tm3, vf_tm3) = fieldset.UV[time2 - fieldset.delta_t,
                                    particle.depth, lat2, lon2]
     dudt3 = (uf_tp3 - uf_tm3) * norm_deltat
     dvdt3 = (vf_tp3 - vf_tm3) * norm_deltat
@@ -246,9 +246,9 @@ def MRAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
     (uf4, vf4) = fieldset.UV[time3, particle.depth, lat3, lon3]
 
     # calculate time derivative of fluid field
-    (uf_tp4, vf_tp4) = fieldset.UV[time3 + particle.dt,
+    (uf_tp4, vf_tp4) = fieldset.UV[time3 + fieldset.delta_t,
                                    particle.depth, lat3, lon3]
-    (uf_tm4, vf_tm4) = fieldset.UV[time3 - particle.dt, particle.depth, lat3, lon3]
+    (uf_tm4, vf_tm4) = fieldset.UV[time3 - fieldset.delta_t, particle.depth, lat3, lon3]
     dudt4 = (uf_tp4 - uf_tm4) * norm_deltat
     dvdt4 = (vf_tp4 - vf_tm4) * norm_deltat
 
@@ -328,8 +328,8 @@ def MRSMAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
         particle.vslip = vslip
     #calculate Reynolds number
     Rep = math.sqrt((uslip)**2 +(vslip)**2) * particle.diameter / (fieldset.nu)
-    if(Rep > 5000):
-        Rep = 5000
+    # if(Rep > 5000):
+    #     Rep = 5000
     #calulate correction factor
     f_REp = 1 + Rep / (4. * (1 + math.sqrt(Rep))) + Rep / 60.
   
@@ -353,9 +353,9 @@ def MRSMAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
         DvDt1 = 0
     else:
         # calculate time derivative of fluid field
-        (uf_tp1, vf_tp1) = fieldset.UV[time+particle.dt,
+        (uf_tp1, vf_tp1) = fieldset.UV[time+fieldset.delta_t,
                                     particle.depth, particle.lat, particle.lon]
-        (uf_tm1, vf_tm1) = fieldset.UV[time-particle.dt, particle.depth,
+        (uf_tm1, vf_tm1) = fieldset.UV[time-fieldset.delta_t, particle.depth,
                                     particle.lat, particle.lon]
         dudt1 = (uf_tp1 - uf_tm1) * norm_deltat
         dvdt1 = (vf_tp1 - vf_tm1) * norm_deltat
@@ -398,9 +398,9 @@ def MRSMAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
         DvDt2 =0
     else:
         # calculate time derivative of fluid field
-        (uf_tp2, vf_tp2) = fieldset.UV[time1+particle.dt,
+        (uf_tp2, vf_tp2) = fieldset.UV[time1+fieldset.delta_t,
                                     particle.depth, lat1, lon1]
-        (uf_tm2, vf_tm2) = fieldset.UV[time1-particle.dt,
+        (uf_tm2, vf_tm2) = fieldset.UV[time1-fieldset.delta_t,
                                     particle.depth, lat1, lon1]
         dudt2 = (uf_tp2 - uf_tm2) * norm_deltat
         dvdt2 = (vf_tp2 - vf_tm2) * norm_deltat
@@ -443,9 +443,9 @@ def MRSMAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
         DvDt3 = 0
     else:
         # calculate time derivative of fluid field
-        (uf_tp3, vf_tp3) = fieldset.UV[time2+particle.dt,
+        (uf_tp3, vf_tp3) = fieldset.UV[time2+fieldset.delta_t,
                                     particle.depth, lat2, lon2]
-        (uf_tm3, vf_tm3) = fieldset.UV[time2-particle.dt,
+        (uf_tm3, vf_tm3) = fieldset.UV[time2-fieldset.delta_t,
                                     particle.depth, lat2, lon2]
         dudt3 = (uf_tp3 - uf_tm3) * norm_deltat
         dvdt3 = (vf_tp3 - vf_tm3) * norm_deltat
@@ -469,6 +469,7 @@ def MRSMAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
         DvDt3 =   (dvdt3 + uf3 * dvdx3 + vf3 * dvdy3)
 
     # coriolis force
+
     f3 = 2 * fieldset.Omega_earth * math.sin(lat2 * math.pi / 180)
     ucor3 = -vf3 * f3
     vcor3 = uf3 * f3
@@ -489,9 +490,9 @@ def MRSMAdvectionRK4_2D_drag_Rep_loaded_time(particle, fieldset, time):
         DvDt4 = 0 
     else:
         # calculate time derivative of fluid field
-        (uf_tp4, vf_tp4) = fieldset.UV[time3 + particle.dt,
+        (uf_tp4, vf_tp4) = fieldset.UV[time3 + fieldset.delta_t,
                                     particle.depth, lat3, lon3]
-        (uf_tm4, vf_tm4) = fieldset.UV[time3 - particle.dt, particle.depth,
+        (uf_tm4, vf_tm4) = fieldset.UV[time3 - fieldset.delta_t, particle.depth,
                                     lat3, lon3]
         dudt4 = (uf_tp4 - uf_tm4) * norm_deltat
         dvdt4 = (vf_tp4 - vf_tm4) * norm_deltat
