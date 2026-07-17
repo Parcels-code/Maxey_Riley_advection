@@ -22,7 +22,8 @@ def Haversine_list(lon : xr.DataArray, lat: xr.DataArray) -> xr.DataArray:
     deg2rad=np.pi/180
     londif = lon.diff(dim='obs')#np.diff(lon)
     latdif = lat.diff(dim='obs')
-    d = 2 * mean_radius_earth * np.arcsin( np.sqrt(np.sin(0.5*latdif*deg2rad)**2 + np.cos(lat[:-1]*deg2rad) * np.cos(lat[1:]*deg2rad)* np.sin(0.5*londif*deg2rad)**2 ))
+    # d = 2 * mean_radius_earth * np.arcsin( np.sqrt(np.sin(0.5*latdif*deg2rad)**2 + np.cos(lat[:-1]*deg2rad) * np.cos(lat[1:]*deg2rad)* np.sin(0.5*londif*deg2rad)**2 ))
+    d = 2 * mean_radius_earth * np.arcsin( np.sqrt(np.sin(0.5*latdif*deg2rad)**2 + np.cos(lat.isel(obs=slice(0,-1))*deg2rad) * np.cos(lat.isel(obs=slice(1,None))*deg2rad)* np.sin(0.5*londif*deg2rad)**2 ))
     return d
 
 def trajectory_length(lon : xr.DataArray,lat : xr.DataArray) -> xr.DataArray:
@@ -74,7 +75,9 @@ def skill_score(lon, lat, lon_ref, lat_ref):
     # relative dist over trajectory length summed over time
     D = Haversine(lon, lat, lon_ref, lat_ref)
     L = trajectory_length(lon_ref, lat_ref)
-    Dsum = D.cumsum(dim='obs')
+    Dsum = D.cumsum(dim='obs').isel(obs=slice(1,-1))
     Lsum = L.cumsum(dim='obs')
-    return 1.-Dsum/Lsum
+    ratio = Dsum / Lsum.where(Lsum != 0)  # avoid 0/0 -> keeps NaN only where Lsum==0
+    return xr.where(ratio > 1, 0, 1.0 - ratio)
+    # return 1.-Dsum.isel(obs=slice(1,-1))/Lsum
 
