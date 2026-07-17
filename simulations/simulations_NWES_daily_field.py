@@ -17,12 +17,11 @@ from datetime import datetime, timedelta
 from helper import create_filelist, set_particles_region, displace_coordinates
 from kernels import InertialParticle2D, deleteParticle
 from kernels import InitializeParticles2D, InitializeParticles2D_MRSM
-from kernels import MRAdvectionRK4_2D, MRSMAdvectionRK4_2D
 from kernels import MRAdvectionRK4_2D_drag_Rep, MRSMAdvectionRK4_2D_drag_Rep
 from kernels import MRSMAdvectionRK4_2D_drag_Rep_constant, MRAdvectionRK4_2D_drag_Rep_constant
 from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_SM
 from kernels import measure_slip_velocity, measure_slip_velocity_SM
-from kernels import set_displacement
+from kernels import set_displacement, beach_particles
 
 
 @click.command()
@@ -31,8 +30,9 @@ from kernels import set_displacement
 @click.option('--month',default=9,help='starting month')
 @click.option('--day',default=1,help='starting day')
 @click.option('--pt',default='tracer',help='particle type')
+@click.option('--ts',default='long',help='time settings')
 
-def run_experiment(pt, rep,year,month,day):
+def run_experiment(pt, rep,year,month,day,ts):
     # set directories
     Rep = rep
     field_directory = '/nethome/4291387/Maxey_Riley_advection/Maxey_Riley_advection/input_data/'
@@ -45,30 +45,30 @@ def run_experiment(pt, rep,year,month,day):
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'tres_{time_resolution}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                    'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}.zarr')
+                    'B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_freq{freqmin:02d}min.zarr') 
     
     output_file_Rep_b = (output_directory + '{particle_type}/{loc}_'
                     'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                     'tres_{time_resolution}_'
                     'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_'
-                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}.zarr')
+                    '_Rep_{Rep:04d}_B{B:04d}_tau{tau:04d}_{land_handling}_cor_{coriolis}_freq{freqmin:02d}min.zarr') 
 
     output_file_tracer_random_b = (output_directory + '{particle_type}/{loc}_'
                             'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                             'tres_{time_resolution}_'
-                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_d{d:04d}_{land_handling}.zarr')
+                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_d{d:04d}_{land_handling}_freq{freqmin:02d}min.zarr') 
     
     output_file_tracer_b = (output_directory + '{particle_type}/{loc}_'
                             'start{y_s:04d}_{m_s:02d}_{d_s:02d}_'
                             'tres_{time_resolution}_'
-                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}.zarr')
+                            'end{y_e:04d}_{m_e:02d}_{d_e:02d}_RK4_{land_handling}_freq{freqmin:02d}min.zarr') 
     np.random.seed(0)
     ##################################
     #       Simulation settings      #
     ##################################
     # options are tracer, inertial, inertial_SM, inertial_drag_Rep, inertial_SM_drag_Rep
     particle_type = pt #'inertial_drag_Rep'
-    land_handling = 'anti_beaching'
+    land_handling = 'delete_beaching'#'anti_beaching'
     time_resolution = 'daily'
     loc = 'NWES'
     grid = 'hex' 
@@ -81,9 +81,27 @@ def run_experiment(pt, rep,year,month,day):
     gradient = True
     starttime = datetime(2023, 9, 1, 0, 0, 0, 0)
     release_time = datetime(year, month, day, 0, 0, 0, 0)
-    runtime = timedelta(days=30)  
+    time_settings = ts 
+    if(time_settings == 'short'):
+        runtime = timedelta(days = 2)
+        dt_timestep = timedelta(seconds=10) 
+        dt_write = timedelta(hours=1)
+    elif(time_settings == 'short_5minfreq'):
+        runtime = timedelta(days = 2)
+        dt_timestep = timedelta(seconds=10) 
+        dt_write = timedelta(minutes=5)
+    elif(time_settings =='long'):
+        runtime = timedelta(days = 30)
+        dt_timestep = timedelta(minutes=5) 
+        dt_write = timedelta(hours=1)  
+    else:
+        ValueError(f"time_settings ({time_settings}) should be short/short_5minfreq/long")
+    
+    # fixed/derived time settings
     endtime = release_time+runtime+timedelta(days=1)
-    dt_timestep = timedelta(minutes=5)
+    freqwritemin = int(dt_write/timedelta(minutes=1))
+    dt_timestep_initial = timedelta(seconds=1)
+    runtime_initial = timedelta(minutes=5)
     d = 300 
     dt_write =timedelta(hours=1)
     B = 0.68
@@ -116,7 +134,7 @@ def run_experiment(pt, rep,year,month,day):
                                             allow_time_extrapolation="False")
 
     if (land_handling == 'anti_beaching'):    
-        antibeachingfile = land_directory + 'anti_beaching_NWES_daily.nc'
+        antibeachingfile = land_directory + 'anti_beaching_NWES_NOW_1_daily.nc'
         filenames_anti_beaching = {'dispU': antibeachingfile,
                                 'dispV': antibeachingfile,
                                 'landmask': antibeachingfile,
@@ -141,6 +159,26 @@ def run_experiment(pt, rep,year,month,day):
         fieldset.add_field(fieldset_anti_beaching.dispV)
         fieldset.add_field(fieldset_anti_beaching.landmask)
         fieldset.add_field(fieldset_anti_beaching.distance2shore)
+
+   
+    if (land_handling == 'delete_beaching'):    
+        deletebeachingfile = land_directory + 'anti_beaching_NWES_NOW_1_daily.nc'
+        
+        filenames_delete_beaching = {'landmask': deletebeachingfile,
+                                'distance2shore':deletebeachingfile}
+        dimensions_delete_beaching = {'lat': 'lat',
+                                    'lon': 'lon'}
+
+        variables_delete_beaching =  {'landmask':'landmask',
+                        'distance2shore' : 'distance2shore'}
+        fieldset_delete_beaching = FieldSet.from_netcdf(filenames_delete_beaching,
+                                                    variables_delete_beaching,
+                                                    dimensions_delete_beaching,
+                                                    indices=indices,
+                                                    mesh='spherical',
+                                                    allow_time_extrapolation="True")
+        fieldset.add_field(fieldset_delete_beaching.landmask)
+        fieldset.add_field(fieldset_delete_beaching.distance2shore)
 
     # angular velocity earth in radians/second
     if(coriolis==True):
@@ -191,6 +229,12 @@ def run_experiment(pt, rep,year,month,day):
         setattr(inertialparticle, 'd2s',
                 Variable('d2s', dtype=np.float32, to_write=False, initial=1e3))
         
+    if (land_handling == 'delete_beaching'):
+        setattr(inertialparticle, 'd2s',
+                Variable('d2s', dtype=np.float32, to_write=False, initial=1e3))
+        setattr(inertialparticle, 'beached',
+                Variable('beached', dtype=np.float32, to_write=True, initial=0))
+        
     # add particle diameter to field
     if (particle_type in ('inertial_drag_Rep','inertial_SM_drag_Rep')):
             setattr(inertialparticle, 'diameter',
@@ -234,7 +278,7 @@ def run_experiment(pt, rep,year,month,day):
     else:
         kernels_init = [InitializeParticles2D, deleteParticle]
 
-    kernels = [too_close_to_edge]
+    kernels = []
     if(save_fluid_velocity == True):
         if(particle_type in ('inertial_SM_Rep_constant', 'inertial_SM_drag_Rep')):
             kernels.append(measure_slip_velocity_SM)
@@ -246,8 +290,6 @@ def run_experiment(pt, rep,year,month,day):
         kernels.append(AdvectionRK4)
     elif (particle_type == 'tracer_random'):
         kernels.append(AdvectionRK4)
-    elif (particle_type == 'inertial'):
-        kernels.append(MRAdvectionRK4_2D)
     elif (particle_type == 'inertial_drag_Rep'):
         kernels.append(MRAdvectionRK4_2D_drag_Rep)
     elif(particle_type == 'inertial_Rep_constant'):
@@ -256,10 +298,6 @@ def run_experiment(pt, rep,year,month,day):
         kernels.append(MRSMAdvectionRK4_2D_drag_Rep_constant)
     elif (particle_type == 'inertial_SM_drag_Rep'):
         kernels.append(MRSMAdvectionRK4_2D_drag_Rep)
-    elif (particle_type == 'inertial_initSM'):
-        kernels.append(MRAdvectionRK4_2D)
-    elif (particle_type == 'inertial_SM'):
-        kernels.append(MRSMAdvectionRK4_2D)
 
     else:
         raise ValueError(f'Error! {particle_type} should' +
@@ -268,7 +306,11 @@ def run_experiment(pt, rep,year,month,day):
     if(land_handling == 'anti_beaching'):
         kernels.append(set_displacement)
 
+   
+    kernels.append(too_close_to_edge)
     kernels.append(remove_at_bounds) 
+    if(land_handling == 'delete_beaching'):
+        kernels.append(beach_particles)
     kernels_init= kernels_init + kernels
 
     if (save_fluid_velocity == True):
@@ -304,7 +346,8 @@ def run_experiment(pt, rep,year,month,day):
                                                    coriolis = coriolis, 
                                                    time_resolution = time_resolution,
                                                    save_vorticity = save_vorticity, 
-                                                   Rep = Rep)
+                                                   Rep = Rep,
+                                                   freqmin = freqwritemin)
     elif (particle_type == 'tracer_random'):
         output_file = output_file_tracer_random_b.format(particle_type=particle_type,
                                                          d = d,
@@ -318,7 +361,8 @@ def run_experiment(pt, rep,year,month,day):
                                                          land_handling=land_handling, 
                                                          coriolis = coriolis,
                                                          time_resolution = time_resolution,
-                                                         save_vorticity = save_vorticity)
+                                                         save_vorticity = save_vorticity,
+                                                         freqmin = freqwritemin)
     elif(particle_type in ['inertial_SM_Rep_constant','inertial_Rep_constant']):
         output_file = output_file_Rep_b.format(particle_type=particle_type,
                                                loc=loc,
@@ -334,7 +378,8 @@ def run_experiment(pt, rep,year,month,day):
                                                coriolis = coriolis, 
                                                save_vorticity = save_vorticity,
                                                time_resolution = time_resolution,
-                                               Rep = Rep)
+                                               Rep = Rep,
+                                               freqmin = freqwritemin)
     else:
         output_file = output_file_b.format(particle_type=particle_type,
                                             loc=loc,
@@ -350,7 +395,8 @@ def run_experiment(pt, rep,year,month,day):
                                             coriolis = coriolis, 
                                             save_vorticity = save_vorticity,
                                             time_resolution = time_resolution,
-                                            Rep = int(Rep))
+                                            Rep = int(Rep),
+                                            freqmin = freqwritemin)
     pfile = ParticleFile(output_file, pset, outputdt=dt_write,
                         chunks=(nparticles, 100))
 
@@ -363,6 +409,8 @@ def run_experiment(pt, rep,year,month,day):
     pfile.add_metadata("particle_type", particle_type)
     pfile.add_metadata('land_handling',land_handling)
     pfile.add_metadata('coriolis',coriolis)
+    pfile.add_metadata('gradient',gradient)
+    pfile.add_metadata('time_settings',time_settings)
 
     pset.execute(kernels_init, runtime=dt_timestep, dt=dt_timestep, verbose_progress=True)
 

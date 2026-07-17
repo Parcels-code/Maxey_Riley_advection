@@ -27,7 +27,7 @@ from kernels import InertialParticle2D, InertialParticle3D, deleteParticle
 from kernels import InitializeParticles2D, InitializeParticles2D_MRSM, InitializeParticles3D
 from kernels_loaded_time import MRAdvectionRK4_2D_drag_Rep_loaded_time, MRSMAdvectionRK4_2D_drag_Rep_loaded_time
 from kernels import MRSMAdvectionRK4_2D_drag_Rep_constant, MRAdvectionRK4_2D_drag_Rep_constant
-from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity
+from kernels import displace, set_displacement, measure_vorticity, measure_fluid_velocity, measure_slip_velocity, beach_particles
 from kernels import too_close_to_edge, remove_at_bounds, measure_slip_velocity_SM
 
 @click.command()
@@ -97,16 +97,16 @@ def run_experiment(pt, rep,year,month,day,d):
                         #   datetime(2024, 4, 1, 0, 0, 0, 0)])
     # settings for temporal releaste
 
-    runtime = timedelta(hours = 48) #timedelta(days = 30)# timedelta(hours = 48)#timedelta(days = 30) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
+    runtime = timedelta(hours = 4) #timedelta(days = 30)# timedelta(hours = 48)#timedelta(days = 30) # timedelta(hours = 48)#timedelta(days = 30)# timedelta(days=30)  # timedelta(hours=24) # timedelta(days=30) # timedelta(hours=24)#
     # total_runtime = timedelta(days=10)
     # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
     endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
     # integration timestep
-    dt_timestep =timedelta(seconds=10) # timedelta(minutes=5) # timedelta(seconds=10)#timedelta(seconds=10)# timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
+    dt_timestep =timedelta(minutes=1) # timedelta(seconds=10) # timedelta(minutes=5) # timedelta(seconds=10)#timedelta(seconds=10)# timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
     dt_timestep_initial = timedelta(seconds=1)
     runtime_initial = timedelta(minutes=5)
     # write timestep
-    dt_write = timedelta(minutes=5)# timedelta(minutes=15)#timedelta(hours=1)# timedelta(hours=1) #  timedelta(minutes=5)#
+    dt_write = timedelta(minutes=1)# timedelta(minutes=15)#timedelta(hours=1)# timedelta(hours=1) #  timedelta(minutes=5)#
     # Buoyancy (rho_particle/rho_fluid)
     B = 0.68
     # stokes relaxation time
@@ -123,7 +123,7 @@ def run_experiment(pt, rep,year,month,day,d):
 
     # 
     # set land boundray handling (options: anti_beaching (anti-beaching kernel) or free_slip (free slip fieldset)) or none
-    land_handling = 'anti_beaching' #free_slip'#'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
+    land_handling = 'delete_beaching'#'anti_beaching' #free_slip'#'anti_beaching'#'anti_beaching' # 'free_slip' #'anti_beaching' # 'anti_beaching' #partialslip
 
     save_vorticity = False
     save_fluid_velocity = False
@@ -133,7 +133,7 @@ def run_experiment(pt, rep,year,month,day,d):
     
 
     coriolis = True #Fal
-    gradient = True #True # False
+    gradient = True  #True # False
     
 
     # particle release location
@@ -223,9 +223,9 @@ def run_experiment(pt, rep,year,month,day,d):
         fieldset.V.interp_method = 'partialslip'
 
     if (land_handling == 'anti_beaching'):    
-        antibeachingfile = land_directory + 'anti_beaching_NWES_Met.nc'
-        if(starttime >= start_Now_dataset):
-            antibeachingfile = land_directory + 'anti_beaching_NWES_NOW.nc'
+        antibeachingfile = land_directory + 'anti_beaching_NWES_1_Met.nc'
+        if(starttime >= start_NOW_dataset):
+            antibeachingfile = land_directory + 'anti_beaching_NWES_1_NOW.nc'
         
         filenames_anti_beaching = {'dispU': antibeachingfile,
                                 'dispV': antibeachingfile,
@@ -253,6 +253,28 @@ def run_experiment(pt, rep,year,month,day,d):
         fieldset.add_field(fieldset_anti_beaching.distance2shore)
 
 
+    if (land_handling == 'delete_beaching'):    
+        deletebeachingfile = land_directory + 'anti_beaching_NWES_1_Met.nc'
+        if(starttime >= start_NOW_dataset):
+            deletebeachingfile = land_directory + 'anti_beaching_NWES_1_NOW.nc'
+        
+        filenames_delete_beaching = {'landmask': deletebeachingfile,
+                                'distance2shore':deletebeachingfile}
+        dimensions_delete_beaching = {'lat': 'lat',
+                                    'lon': 'lon'}
+
+        variables_delete_beaching =  {'landmask':'landmask',
+                        'distance2shore' : 'distance2shore'}
+        fieldset_delete_beaching = FieldSet.from_netcdf(filenames_delete_beaching,
+                                                    variables_delete_beaching,
+                                                    dimensions_delete_beaching,
+                                                    indices=indices,
+                                                    mesh='spherical',
+                                                    allow_time_extrapolation="True")
+        fieldset.add_field(fieldset_delete_beaching.landmask)
+        fieldset.add_field(fieldset_delete_beaching.distance2shore)
+
+
     # angular velocity earth in radians/second
     if(coriolis==True):
         fieldset.add_constant('Omega_earth', 7.2921 * (10**-5))
@@ -273,6 +295,7 @@ def run_experiment(pt, rep,year,month,day,d):
     fieldset.add_constant('nu',1.3729308666017527*10**(-6))
     # turn on or off gradient calculation
     fieldset.add_constant('gradient', gradient)
+    
 
     #save slip veocty
     fieldset.add_constant('save_slip_velocity',save_slip_velocity)
@@ -286,6 +309,7 @@ def run_experiment(pt, rep,year,month,day,d):
     delta_x = 0.5 * Delta_x
     delta_y = 0.5 * Delta_y
     delta_t = 0.5 * Delta_t
+    print(delta_t)
     # print(f'delta_x = {delta_x}')
 
     fieldset.add_constant('delta_x', delta_x)
@@ -315,6 +339,12 @@ def run_experiment(pt, rep,year,month,day,d):
                 Variable('dV', dtype=np.float32, to_write=False, initial=0))
         setattr(inertialparticle, 'd2s',
                 Variable('d2s', dtype=np.float32, to_write=False, initial=1e3))
+            
+    if (land_handling == 'delete_beaching'):
+        setattr(inertialparticle, 'd2s',
+                Variable('d2s', dtype=np.float32, to_write=False, initial=1e3))
+        setattr(inertialparticle, 'beached',
+                Variable('beached', dtype=np.float32, to_write=True, initial=0))
         
     # add particle diameter to field
     if (particle_type in ('inertial_drag_Rep','inertial_SM_drag_Rep')):
@@ -408,7 +438,7 @@ def run_experiment(pt, rep,year,month,day,d):
     else:
         kernels_init = [InitializeParticles2D, deleteParticle] # try this to see if it fixes anything? 
 
-    kernels = [too_close_to_edge]
+    kernels = []
     if(land_handling == 'anti_beaching'):
         kernels.append(displace)
     if(save_vorticity == True):
@@ -440,7 +470,10 @@ def run_experiment(pt, rep,year,month,day,d):
     if(land_handling == 'anti_beaching'):
         kernels.append(set_displacement)
 
+    kernels.append(too_close_to_edge)
     kernels.append(remove_at_bounds) 
+    if(land_handling == 'delete_beaching'):
+        kernels.append(beach_particles)
     kernels_init= kernels_init # + kernels
     if (save_vorticity == True):
         setattr(inertialparticle, 'vorticity',

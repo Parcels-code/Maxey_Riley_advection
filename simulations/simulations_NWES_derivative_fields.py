@@ -101,7 +101,7 @@ def run_experiment(pt, rep,year,month,day,d):
     # endtime = datetime(2024, 5, 1, 0, 0, 0, 0)#starttime +timedelta(days=45)
     endtime = release_times[-1]+runtime+timedelta(days=1)#datetime(2024, 5, 1, 0, 0, 0, 0)
     # integration timestep
-    dt_timestep =timedelta(seconds=10) # timedelta(minutes=5) # timedelta(seconds=10)#timedelta(seconds=10)# timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
+    dt_timestep = timedelta(seconds=10)# timedelta(minutes=5) # timedelta(seconds=10)# timedelta(minutes=5) # timedelta(seconds=10) # timedelta(minutes=5) # timedelta(seconds=10)#timedelta(seconds=10)# timedelta(minutes=1)#timedelta(seconds=30)#timedelta(minutes=5)
     dt_timestep_initial = timedelta(seconds=1)
     runtime_initial = timedelta(minutes=5)
     # write timestep
@@ -381,7 +381,7 @@ def run_experiment(pt, rep,year,month,day,d):
         land_mask_file = land_directory + 'NWS_mask_land_Now.nc'
         doggersbank_mask_file = land_directory + 'NWS_mask_doggersbank_Now.nc' 
         norwegian_trench_mask_file = land_directory + 'NWS_mask_norwegian_trench_Now.nc' 
-        NWES_hex_file = land_directory + 'NWES_hex_release_Now_res6.nc' 
+        NWES_hex_file = land_directory + 'NWES_hex_release_NOW_res6.nc' 
 
     # doggersbank_mask_file= land_directory +' NWS_mask_doggersbank.nc' # still needs to be created use depth
     if (loc == 'custom'):
