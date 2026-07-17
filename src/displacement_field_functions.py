@@ -179,8 +179,12 @@ def distance_to_shore(landmask : Dataset, dx : float =1) -> np.array :
     """
     ci = get_coastal_nodes(landmask)  # direct neighbors
     dist = ci * dx  # 1 dx away
+    
 
     ci_d = get_coastal_nodes_diagonal(landmask)  # diagonal neighbors
     dist_d = (ci_d - ci) * np.sqrt(2 * dx**2)  # sqrt(2) dx away
-
-    return dist + dist_d
+    disttotal = dist + dist_d
+    ocean = (landmask == 0)
+    disttotal = np.where(ocean & (disttotal == 0), 2, disttotal)
+    
+    return disttotal# dist + dist_d
